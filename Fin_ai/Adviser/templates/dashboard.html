@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome, {{ request.user.username }}!</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+</head>
+<body>
+
+<div class="container">
+    <h1>Welcome, {{ request.user.username }}!</h1>
+    <div class="budget-info">
+        <p><strong>Budget Limit:</strong> ${{ budget.monthly_limit }}</p>
+        <p><strong>Amount Spent:</strong> ${{ budget.spent }}</p>
+        <p><strong>Remaining Budget:</strong> ${{ budget.remaining_budget }}</p>
+    </div>
+    <div class="links">
+        <a href="{% url 'transactions' %}">View Transactions</a>
+        <a href="{% url 'chatbot' %}">Chat with AI</a>
+    </div>
+</div>
+
+</body>
+</html>

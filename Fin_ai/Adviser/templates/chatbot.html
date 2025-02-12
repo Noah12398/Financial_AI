@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Finance Chatbot</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/chatbot.css' %}">
+</head>
+<body>
+
+<div class="container">
+    <h1>AI Finance Chatbot</h1>
+    <form method="POST">
+        {% csrf_token %}
+        <input type="text" name="message" placeholder="Ask something...">
+        <button type="submit">Ask</button>
+    </form>
+    {% if bot_response %}
+    <p><strong>AI:</strong> {{ bot_response }}</p>
+    {% endif %}
+</div>
+
+</body>
+</html>

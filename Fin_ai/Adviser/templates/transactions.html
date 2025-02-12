@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Transactions</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/transactions.css' %}">
+</head>
+<body>
+
+<div class="container">
+    <h1>Your Transactions</h1>
+    <ul>
+        {% for t in transactions %}
+        <li>
+            <span>{{ t.date }} - {{ t.category }}</span>
+            <span class="amount">${{ t.amount }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+</body>
+</html>
