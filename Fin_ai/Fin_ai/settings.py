@@ -51,6 +51,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# settings.py
+LOGIN_URL = '/accounts/login/'
+# settings.py
+LOGIN_REDIRECT_URL = '/Adviser'  # Redirect to homepage or any page you prefer
+
+LOGOUT_REDIRECT_URL = '/accounts/login/'  # Where users go after logging out
+
 ROOT_URLCONF = 'Fin_ai.urls'
 
 TEMPLATES = [

@@ -11,14 +11,22 @@
 
 <div class="container">
     <h1>Welcome, {{ request.user.username }}!</h1>
+    
     <div class="budget-info">
         <p><strong>Budget Limit:</strong> ${{ budget.monthly_limit }}</p>
         <p><strong>Amount Spent:</strong> ${{ budget.spent }}</p>
         <p><strong>Remaining Budget:</strong> ${{ budget.remaining_budget }}</p>
     </div>
+    
     <div class="links">
         <a href="{% url 'transactions' %}">View Transactions</a>
         <a href="{% url 'chatbot' %}">Chat with AI</a>
+
+        <!-- Logout using POST request -->
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="logout-button">Logout</button>
+        </form>
     </div>
 </div>
 

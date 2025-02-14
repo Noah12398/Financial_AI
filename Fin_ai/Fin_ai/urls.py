@@ -21,4 +21,6 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('Adviser/', include('Adviser.urls')),
+    path('Adviser/', include('django.contrib.auth.urls')),  # Add this line
+
 ]
