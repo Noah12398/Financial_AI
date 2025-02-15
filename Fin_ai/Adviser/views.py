@@ -2,30 +2,38 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
+from .forms import BudgetForm
 
-from Adviser.forms import UserRegistrationForm
-from .models import Transaction, Budget
+from Adviser.forms import ExpenseForm, UserRegistrationForm
+from .models import Expense, Transaction, Budget
 import openai
 import os
+from django.shortcuts import get_object_or_404
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Dashboard view - logged-in users only
 @login_required
 def dashboard(request):
-    try:
-        # Get user's budget or handle the case where no budget exists
-        user_budget = Budget.objects.get(user=request.user)
-    except Budget.DoesNotExist:
-        user_budget = None  # Handle cases where no budget exists for the user
+    # Retrieve all budgets for the logged-in user
+    budgets = Budget.objects.filter(user=request.user)
 
-    # Get user's transactions
-    transactions = Transaction.objects.filter(user=request.user)
+    # Calculate total budget limit
+    total_limit = sum(budget.limit for budget in budgets)
 
-    return render(request, "dashboard.html", {
-        "budget": user_budget,
-        "transactions": transactions
-    })
+    # Calculate total amount spent across all transactions
+    amount_spent = sum(transaction.amount for transaction in Transaction.objects.filter(user=request.user))
+
+    # Calculate remaining budget
+    remaining_budget = total_limit - amount_spent
+
+    context = {
+        'user': request.user.username,
+        'total_limit': total_limit,
+        'amount_spent': amount_spent,
+        'remaining_budget': max(remaining_budget, 0),  # Avoid negative values
+    }
+    return render(request, 'dashboard.html', context)
 
 # Home view - Redirect to dashboard if logged in, else show home page
 def home(request):
@@ -82,3 +90,95 @@ def login_user(request):
             messages.error(request, "Invalid username or password")
             return redirect('login')  # Stay on the login page if authentication fails
     return render(request, 'authentication/login.html')
+
+@login_required
+def add_expense(request):
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST)
+        if form.is_valid():
+            expense = form.save(commit=False)
+            expense.user = request.user  # Assign the logged-in user to the expense
+            expense.save()
+            return redirect('transactions')  # Redirect to transactions page or another page
+    else:
+        form = ExpenseForm()
+    
+    return render(request, 'add_expense.html', {'form': form})
+
+@login_required
+def transactions_view(request):
+    # Fetch transactions from the database for the logged-in user
+    transactions = Transaction.objects.filter(user=request.user).order_by("-date")
+    return render(request, 'transactions.html', {'transactions': transactions})
+
+@login_required
+def manage_expenses(request):
+    expenses = Expense.objects.filter(user=request.user)
+    return render(request, 'manage_expenses.html', {'expenses': expenses})
+
+@login_required
+def edit_expense(request, expense_id):
+    expense = get_object_or_404(Expense, id=expense_id, user=request.user)
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST, instance=expense)
+        if form.is_valid():
+            form.save()
+            return redirect('manage_expenses')
+    else:
+        form = ExpenseForm(instance=expense)
+    return render(request, 'edit_expense.html', {'form': form})
+
+@login_required
+def delete_expense(request, expense_id):
+    expense = get_object_or_404(Expense, id=expense_id, user=request.user)
+    if request.method == 'POST':
+        expense.delete()
+        return redirect('manage_expenses')
+
+
+@login_required
+def manage_budgets(request):
+    budgets = Budget.objects.filter(user=request.user)
+    return render(request, 'manage_budgets.html', {'budgets': budgets})
+
+
+# 🟢 Add Budget
+@login_required
+def add_budget(request):
+    if request.method == 'POST':
+        form = BudgetForm(request.POST)
+        if form.is_valid():
+            budget = form.save(commit=False)
+            budget.user = request.user
+            budget.save()
+            messages.success(request, 'Budget added successfully!')
+            return redirect('manage_budgets')
+    else:
+        form = BudgetForm()
+    return render(request, 'add_budget.html', {'form': form})
+
+
+# 🟡 Edit Budget
+@login_required
+def edit_budget(request, budget_id):
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+    if request.method == 'POST':
+        form = BudgetForm(request.POST, instance=budget)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Budget updated successfully!')
+            return redirect('manage_budgets')
+    else:
+        form = BudgetForm(instance=budget)
+    return render(request, 'edit_budget.html', {'form': form})
+
+
+# 🔴 Delete Budget
+@login_required
+def delete_budget(request, budget_id):
+    budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+    if request.method == 'POST':
+        budget.delete()
+        messages.success(request, 'Budget deleted successfully!')
+        return redirect('manage_budgets')
+    return render(request, 'confirm_delete.html', {'budget': budget})

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Budget</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+</head>
+<body class="container py-5">
+    <h2 class="mb-4">Add New Budget</h2>
+
+    <form method="post" class="border p-4 rounded shadow">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Add Budget</button>
+    </form>
+
+    <a href="{% url 'manage_budgets' %}" class="btn btn-secondary mt-3">Back to Budgets</a>
+</body>
+</html>

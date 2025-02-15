@@ -3,32 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome, {{ request.user.username }}!</title>
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <title>Budget Dashboard</title>
+    <style>
+        /* Background with gradient */
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: linear-gradient(135deg, #4A90E2, #50E3C2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Poppins', sans-serif;
+            color: #fff;
+            text-align: center;
+        }
+
+        .dashboard {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 2rem 3rem;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            transition: transform 0.3s;
+        }
+
+        .dashboard:hover {
+            transform: translateY(-10px);
+        }
+
+        h2 {
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            color: #fff;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.6);
+        }
+
+        .info {
+            margin: 1rem 0;
+            font-size: 1.4rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .value {
+            font-weight: bold;
+            color: #FFE600;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+        }
+
+        .links {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .links a, .links button {
+            text-decoration: none;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        .links a:hover, .links button:hover {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        .logout-button {
+            margin-top: 1rem;
+            background: #FF4B5C;
+        }
+
+        .logout-button:hover {
+            background: #FF2C3E;
+        }
+
+        @media (max-width: 480px) {
+            .dashboard {
+                padding: 1.5rem;
+            }
+            .links {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="dashboard">
+        <h2>💸 Budget Dashboard</h2>
 
-<div class="container">
-    <h1>Welcome, {{ request.user.username }}!</h1>
-    
-    <div class="budget-info">
-        <p><strong>Budget Limit:</strong> ${{ budget.monthly_limit }}</p>
-        <p><strong>Amount Spent:</strong> ${{ budget.spent }}</p>
-        <p><strong>Remaining Budget:</strong> ${{ budget.remaining_budget }}</p>
+        <div class="info">👋 Welcome, <span class="value">{{ user }}</span>!</div>
+        <div class="info">💰 Budget Limit: <span class="value">$ {{ total_limit }}</span></div>
+        <div class="info">📉 Amount Spent: <span class="value">$ {{ amount_spent }}</span></div>
+        <div class="info">🟢 Remaining Budget: <span class="value">$ {{ remaining_budget }}</span></div>
+
+        <div class="links">
+            <a href="{% url 'transactions' %}">📜 View Transactions</a>
+            <a href="{% url 'chatbot' %}">🤖 Chat with AI</a>
+            <a href="{% url 'manage_expenses' %}">💲 Manage Expenses</a>
+            <a href="{% url 'manage_budgets' %}">📊 Manage Budgets</a>
+
+            <!-- Logout Button -->
+            <form method="post" action="{% url 'logout' %}" style="margin-top: 1rem;">
+                {% csrf_token %}
+                <button type="submit" class="logout-button">🚪 Logout</button>
+            </form>
+        </div>
     </div>
-    
-    <div class="links">
-        <a href="{% url 'transactions' %}">View Transactions</a>
-        <a href="{% url 'chatbot' %}">Chat with AI</a>
-
-        <!-- Logout using POST request -->
-        <form method="post" action="{% url 'logout' %}" style="display:inline;">
-            {% csrf_token %}
-            <button type="submit" class="logout-button">Logout</button>
-        </form>
-    </div>
-</div>
-
 </body>
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,19 +8,23 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/transactions.css' %}">
 </head>
+
 <body>
 
-<div class="container">
-    <h1>Your Transactions</h1>
-    <ul>
-        {% for t in transactions %}
-        <li>
-            <span>{{ t.date }} - {{ t.category }}</span>
-            <span class="amount">${{ t.amount }}</span>
-        </li>
-        {% endfor %}
-    </ul>
-</div>
+    <div class="container">
+        <h2>Your Transactions</h2>
+        {% if transactions %}
+        <ul>
+            {% for transaction in transactions %}
+            <li>{{ transaction.date }} - {{ transaction.category }}: ${{ transaction.amount }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No transactions found.</p>
+        {% endif %}
+
+    </div>
 
 </body>
+
 </html>

@@ -1,30 +1,46 @@
 from django.db import models
-
-# Create your models here.
 from django.contrib.auth.models import User
 
-class Transaction(models.Model):
+class Expense(models.Model):
     CATEGORY_CHOICES = [
-        ("Food", "Food"),
-        ("Rent", "Rent"),
-        ("Shopping", "Shopping"),
-        ("Utilities", "Utilities"),
-        ("Entertainment", "Entertainment"),
-        ("Other", "Other"),
+        ('food', 'Food'),
+        ('rent', 'Rent'),
+        ('shopping', 'Shopping'),
+        ('transport', 'Transport'),
+        # Add more categories as needed
     ]
+    
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    date = models.DateField(auto_now_add=True)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
+    category = models.CharField(max_length=100, choices=CATEGORY_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField(blank=True, null=True)
-
+    date = models.DateField()
+    
     def __str__(self):
         return f"{self.user.username} - {self.category} - {self.amount}"
 
-class Budget(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    monthly_limit = models.DecimalField(max_digits=10, decimal_places=2)
-    spent = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+class Transaction(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Added user field
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    description = models.CharField(max_length=255)
+    date = models.DateField()
 
-    def remaining_budget(self):
-        return self.monthly_limit - self.spent
+    def __str__(self):
+        return f"{self.description} - {self.amount}"
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+class Budget(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    limit = models.DecimalField(max_digits=10, decimal_places=2)
+    class Meta:
+        db_table = 'BudgetTable'
+    def __str__(self):
+        return f"{self.user.username} - {self.category.name} - Limit: {self.limit}"
+
+
