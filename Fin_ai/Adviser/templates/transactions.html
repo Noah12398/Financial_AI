@@ -1,30 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Transactions</title>
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'css/transactions.css' %}">
-</head>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #4A90E2, #50E3C2);
+            color: #fff;
+            text-align: center;
+            margin-top: 5%;
+        }
 
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        h2 {
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: rgba(255, 255, 255, 0.2);
+            margin: 0.5rem 0;
+            padding: 1rem;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-btn {
+            background: #FF4B5C;
+            border: none;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: #c9303e;
+        }
+
+        .add-link {
+            display: block;
+            margin-top: 2rem;
+            color: #fff;
+            text-decoration: none;
+            background-color: #28a745;
+            padding: 0.7rem;
+            border-radius: 10px;
+            transition: background 0.3s;
+        }
+
+        .add-link:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
 <body>
 
     <div class="container">
-        <h2>Your Transactions</h2>
+        <h2>💳 Your Transactions</h2>
         {% if transactions %}
-        <ul>
-            {% for transaction in transactions %}
-            <li>{{ transaction.date }} - {{ transaction.category }}: ${{ transaction.amount }}</li>
-            {% endfor %}
-        </ul>
+            <ul>
+                {% for transaction in transactions %}
+                    <li>
+                        {{ transaction.date }} - {{ transaction.category }}: ${{ transaction.amount }} 
+                        <form action="{% url 'delete_transaction' transaction.id %}" method="get" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="delete-btn">🗑️ Delete</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
         {% else %}
-        <p>No transactions found.</p>
+            <p>No transactions found.</p>
         {% endif %}
-
+        <a href="{% url 'add_transaction' %}" class="add-link">➕ Add Transaction</a>
     </div>
 
 </body>
-
 </html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Transaction</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #FF6B6B, #FFD93D);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .form-container {
+            background: rgba(255, 255, 255, 0.85);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            width: 300px;
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 1.5rem;
+            color: #222;
+        }
+
+        select, input {
+            width: 100%;
+            margin: 0.5rem 0;
+            padding: 0.7rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        button {
+            margin-top: 1rem;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 1.1rem;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        a {
+            display: block;
+            margin-top: 1rem;
+            text-decoration: none;
+            color: #444;
+            transition: color 0.3s;
+        }
+
+        a:hover {
+            color: #222;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <h2>➕ Add New Transaction</h2>
+        <form method="post" action="{% url 'add_transaction' %}">
+            {% csrf_token %}
+            <select name="category" required>
+                <option value="" disabled selected>Select Category</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+
+            <input type="number" name="amount" step="0.01" placeholder="Amount" required>
+
+            <input type="text" name="description" placeholder="Description" required>
+
+            <button type="submit">Add Transaction</button>
+        </form>
+        <a href="{% url 'transactions' %}">⬅️ Back to Transactions</a>
+    </div>
+
+</body>
+</html>

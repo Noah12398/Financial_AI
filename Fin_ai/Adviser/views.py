@@ -5,7 +5,7 @@ from django.contrib import messages
 from .forms import BudgetForm
 
 from Adviser.forms import ExpenseForm, UserRegistrationForm
-from .models import Expense, Transaction, Budget
+from .models import Category, Expense, Transaction, Budget
 import openai
 import os
 from django.shortcuts import get_object_or_404
@@ -182,3 +182,45 @@ def delete_budget(request, budget_id):
         messages.success(request, 'Budget deleted successfully!')
         return redirect('manage_budgets')
     return render(request, 'confirm_delete.html', {'budget': budget})
+
+@login_required
+def add_category(request):
+    if request.method == "POST":
+        name = request.POST.get("name")
+        if name:
+            Category.objects.create(name=name)
+            return redirect("manage_budgets")
+    return render(request, "add_category.html")
+
+
+@login_required
+def transactions_view(request):
+    transactions = Transaction.objects.filter(user=request.user).order_by('-date')
+    return render(request, 'transactions.html', {'transactions': transactions})
+
+@login_required
+def add_transaction(request):
+    if request.method == 'POST':
+        category_id = request.POST.get('category')
+        amount = request.POST.get('amount')
+        description = request.POST.get('description')
+
+        if category_id and amount and description:
+            category = Category.objects.get(id=category_id)
+            Transaction.objects.create(
+                user=request.user,
+                category=category,
+                amount=amount,
+                description=description
+            )
+            return redirect('transactions')
+    categories = Category.objects.all()
+    return render(request, 'add_transaction.html', {'categories': categories})
+
+@login_required
+def delete_transaction(request, transaction_id):
+    transaction = get_object_or_404(Transaction, id=transaction_id, user=request.user)
+    if request.method == 'POST':
+        transaction.delete()
+        return redirect('transactions')
+    return render(request, 'delete_transaction.html', {'transaction': transaction})

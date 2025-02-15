@@ -4,7 +4,6 @@ from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path("", views.register, name="register"),
-    path("transactions/", views.transactions, name="transactions"),
     path("chatbot/", views.chatbot, name="chatbot"),
     path('register/', views.register, name='register'),
     path("dashboard/", views.dashboard, name="dashboard"),  # Dashboard path
@@ -17,5 +16,10 @@ urlpatterns = [
     path('budgets/add/', views.add_budget, name='add_budget'),
     path('budgets/edit/<int:budget_id>/', views.edit_budget, name='edit_budget'),
     path('budgets/delete/<int:budget_id>/', views.delete_budget, name='delete_budget'),
+    path('add_category/', views.add_category, name='add_category'),
+    path('transactions/', views.transactions_view, name='transactions'),
+    path('transactions/add/', views.add_transaction, name='add_transaction'),
+    path('transactions/delete/<int:transaction_id>/', views.delete_transaction, name='delete_transaction'),
+
 ]
 

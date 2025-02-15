@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Category</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #4A90E2, #50E3C2);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .form-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 2rem 3rem;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        h2 {
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.6rem;
+            margin: 1rem 0;
+            border: none;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1rem;
+            color: #333;
+        }
+
+        button {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 1.1rem;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        a {
+            display: block;
+            margin-top: 1rem;
+            color: #fff;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        a:hover {
+            color: #FFE600;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>➕ Add New Category</h2>
+        <form method="post" action="{% url 'add_category' %}">
+            {% csrf_token %}
+            <input type="text" name="name" placeholder="Enter Category Name" required>
+            <br>
+            <button type="submit">Add Category</button>
+        </form>
+        <a href="{% url 'dashboard' %}">⬅️ Back to Dashboard</a>
+    </div>
+</body>
+</html>
