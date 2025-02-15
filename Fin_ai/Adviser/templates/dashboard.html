@@ -5,120 +5,191 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Budget Dashboard</title>
     <style>
-        /* Background with gradient */
+        /* Dark theme with modern professional layout */
         body {
             margin: 0;
             padding: 0;
             height: 100vh;
-            background: linear-gradient(135deg, #4A90E2, #50E3C2);
+            background-color: #0F111A;
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: 'Poppins', sans-serif;
-            color: #fff;
-            text-align: center;
         }
 
-        .dashboard {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            padding: 2rem 3rem;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
-            max-width: 500px;
-            width: 100%;
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            background: #1C1E2A;
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+            width: 80%;
+            max-width: 1000px;
+        }
+
+        .user-info {
+            border-right: 1px solid #333;
+            padding-right: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .user-info h2 {
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
+        }
+
+        .info-card {
+            background: #2B2D42;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 12px;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             transition: transform 0.3s;
         }
 
-        .dashboard:hover {
-            transform: translateY(-10px);
+        .info-card:hover {
+            transform: translateY(-5px);
         }
 
-        h2 {
-            margin-bottom: 2rem;
-            font-size: 2rem;
-            color: #fff;
-            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.6);
+        .info-card .value {
+            color: #00FFB6;
+            font-weight: 600;
         }
 
-        .info {
-            margin: 1rem 0;
-            font-size: 1.4rem;
-            padding: 0.5rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .value {
-            font-weight: bold;
-            color: #FFE600;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
-        }
-
-        .links {
-            margin-top: 2rem;
+        .actions {
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            margin-top: 2rem;
         }
 
-        .links a, .links button {
+        .actions a, .actions button {
             text-decoration: none;
-            color: #fff;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.6rem 1.2rem;
+            color: #FFFFFF;
+            background: #3A3C58;
+            padding: 0.75rem 1.5rem;
             border-radius: 10px;
             transition: background 0.3s;
+            text-align: center;
             border: none;
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: 1rem;
         }
 
-        .links a:hover, .links button:hover {
-            background: rgba(0, 0, 0, 0.6);
+        .actions a:hover, .actions button:hover {
+            background: #575A7B;
         }
 
         .logout-button {
-            margin-top: 1rem;
             background: #FF4B5C;
+            margin-top: auto;
         }
 
         .logout-button:hover {
-            background: #FF2C3E;
+            background: #E03E4D;
         }
 
-        @media (max-width: 480px) {
-            .dashboard {
-                padding: 1.5rem;
+        .main-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-left: 2rem;
+        }
+
+        .dashboard-title {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
+        }
+
+        .link-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+
+        .link-grid a {
+            background: #282A36;
+            color: #FFFFFF;
+            text-decoration: none;
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.3s;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .link-grid a:hover {
+            background: #44475A;
+            transform: translateY(-5px);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
             }
-            .links {
-                flex-direction: column;
-                gap: 0.5rem;
+
+            .user-info {
+                border-right: none;
+                border-bottom: 1px solid #333;
+                padding-right: 0;
+                padding-bottom: 2rem;
+            }
+
+            .main-panel {
+                padding-left: 0;
             }
         }
     </style>
 </head>
 <body>
-    <div class="dashboard">
-        <h2>💸 Budget Dashboard</h2>
+    <div class="dashboard-container">
+        <!-- User Info Panel -->
+        <div class="user-info">
+            <h2>Welcome, {{ user }}</h2>
+            <div class="info-card">
+                <span>💰 Budget Limit</span>
+                <span class="value">$ {{ total_limit }}</span>
+            </div>
+            <div class="info-card">
+                <span>📉 Amount Spent</span>
+                <span class="value">$ {{ amount_spent }}</span>
+            </div>
+            <div class="info-card">
+                <span>🟢 Remaining</span>
+                <span class="value">$ {{ remaining_budget }}</span>
+            </div>
+            <div class="actions">
+                <!-- Logout Button -->
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-button">🚪 Logout</button>
+                </form>
+            </div>
+        </div>
 
-        <div class="info">👋 Welcome, <span class="value">{{ user }}</span>!</div>
-        <div class="info">💰 Budget Limit: <span class="value">$ {{ total_limit }}</span></div>
-        <div class="info">📉 Amount Spent: <span class="value">$ {{ amount_spent }}</span></div>
-        <div class="info">🟢 Remaining Budget: <span class="value">$ {{ remaining_budget }}</span></div>
-
-        <div class="links">
-            <a href="{% url 'transactions' %}">📜 View Transactions</a>
-            <a href="{% url 'chatbot' %}">🤖 Chat with AI</a>
-            <a href="{% url 'manage_expenses' %}">💲 Manage Expenses</a>
-            <a href="{% url 'manage_budgets' %}">📊 Manage Budgets</a>
-            <a href="{% url 'add_category' %}">🆕 Add Category</a>
-
-            <!-- Logout Button -->
-            <form method="post" action="{% url 'logout' %}" style="margin-top: 1rem;">
-                {% csrf_token %}
-                <button type="submit" class="logout-button">🚪 Logout</button>
-            </form>
+        <!-- Main Navigation Panel -->
+        <div class="main-panel">
+            <div class="dashboard-title">Budget Management</div>
+            <div class="link-grid">
+                <a href="{% url 'transactions' %}">📜 Transactions</a>
+                <a href="{% url 'chatbot' %}">🤖 AI Assistant</a>
+                <a href="{% url 'manage_expenses' %}">💲 Manage Expenses</a>
+                <a href="{% url 'manage_budgets' %}">📊 Manage Budgets</a>
+                <a href="{% url 'add_category' %}">🆕 Add Category</a>
+            </div>
         </div>
     </div>
 </body>

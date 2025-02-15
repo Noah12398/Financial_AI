@@ -9,7 +9,8 @@
             font-family: 'Poppins', sans-serif;
             text-align: center;
             margin-top: 10%;
-            color: #333;
+            color: #fff;
+            background: linear-gradient(135deg, #0d0d0d, #3d3e3f);
         }
 
         .delete-box {
@@ -18,7 +19,7 @@
             padding: 2rem;
             border: 2px solid #FF4B5C;
             border-radius: 15px;
-            background: #ffe6e6;
+            background: rgba(30, 30, 30, 0.85);
             box-shadow: 0 5px 15px rgba(255, 0, 0, 0.4);
         }
 
@@ -31,6 +32,7 @@
             cursor: pointer;
             margin: 1rem;
             transition: background 0.3s;
+            font-size: 1.1rem;
         }
 
         button:hover {
@@ -39,20 +41,21 @@
 
         a {
             text-decoration: none;
-            color: #333;
+            color: #fff;
             margin-top: 1rem;
             display: inline-block;
+            transition: color 0.3s;
         }
 
         a:hover {
-            text-decoration: underline;
+            color: #FFD93D;
         }
     </style>
 </head>
 <body>
 
     <div class="delete-box">
-        <h3>Are you sure you want to delete this transaction?</h3>
+        <h3>⚠️ Are you sure you want to delete this transaction?</h3>
         <p>{{ transaction.description }} - ${{ transaction.amount }} ({{ transaction.date }})</p>
         
         <form method="post">

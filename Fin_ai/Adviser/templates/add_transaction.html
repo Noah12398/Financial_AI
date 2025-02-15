@@ -6,9 +6,9 @@
     <title>Add Transaction</title>
     <style>
         body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #FF6B6B, #FFD93D);
-            color: #333;
+            font-family: 'Inter', sans-serif;
+            background-color: #0F111A;
+            color: #FFFFFF;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -17,54 +17,70 @@
         }
 
         .form-container {
-            background: rgba(255, 255, 255, 0.85);
+            background: #1C1E2A;
             padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-            width: 300px;
+            border-radius: 16px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
+            width: 350px;
             text-align: center;
+            border: 1px solid #333;
         }
 
         h2 {
-            margin-bottom: 1.5rem;
-            color: #222;
+            margin-bottom: 2rem;
+            color: #FFFFFF;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
         }
 
         select, input {
             width: 100%;
             margin: 0.5rem 0;
-            padding: 0.7rem;
+            padding: 0.75rem 1rem;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 1rem;
+            background: #2B2D42;
+            color: #FFFFFF;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            transform: translateY(-3px);
         }
 
         button {
-            margin-top: 1rem;
-            background-color: #28a745;
-            color: #fff;
+            margin-top: 1.5rem;
+            background-color: #00FFB6;
+            color: #000;
             border: none;
-            padding: 0.7rem 1.5rem;
-            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: background 0.3s, transform 0.3s;
             font-size: 1.1rem;
         }
 
         button:hover {
-            background-color: #218838;
+            background-color: #00DDA5;
+            transform: translateY(-5px);
         }
 
         a {
             display: block;
-            margin-top: 1rem;
+            margin-top: 1.5rem;
             text-decoration: none;
-            color: #444;
-            transition: color 0.3s;
+            color: #FFFFFF;
+            background: #3A3C58;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            transition: background 0.3s;
         }
 
         a:hover {
-            color: #222;
+            background: #575A7B;
         }
     </style>
 </head>
