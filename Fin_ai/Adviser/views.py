@@ -218,7 +218,7 @@ def add_transaction(request):
 
         if category_id and amount and description:
             category = Category.objects.get(id=category_id)
-            Transaction.objects.create(
+            Transaction.objects.create( 
                 user=request.user,
                 category=category,
                 amount=amount,
