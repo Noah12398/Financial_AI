@@ -23,7 +23,7 @@ class ExpenseForm(forms.ModelForm):
     class Meta:
         model = Expense
         fields = ['category', 'amount', 'date']
-        
+
 
 class BudgetForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):

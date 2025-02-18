@@ -4,7 +4,7 @@ from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path("", views.register, name="register"),
-    path("chatbot/", views.chatbot, name="chatbot"),
+    # path("chatbot/", views.chatbot, name="chatbot"),
     path('register/', views.register, name='register'),
     path("dashboard/", views.dashboard, name="dashboard"),  # Dashboard path
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
@@ -20,7 +20,7 @@ urlpatterns = [
     path('transactions/', views.transactions_view, name='transactions'),
     path('transactions/add/', views.add_transaction, name='add_transaction'),
     path('transactions/delete/<int:transaction_id>/', views.delete_transaction, name='delete_transaction'),
-    path('api/chatbot/', views.chatbot_query, name='chatbot_query'),
+    path('chatbot/', views.chatbot_query, name='chatbot_query'),
 
 ]
 

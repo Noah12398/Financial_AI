@@ -18,14 +18,6 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 from django.http import JsonResponse
 from .rag import get_rag_response
 
-def chatbot_query(request):
-    user_query = request.GET.get("query")
-    if not user_query:
-        return JsonResponse({"error": "Query parameter is required"}, status=400)
-
-    response = get_rag_response(user_query)
-    return JsonResponse({"response": response})
-
 # Dashboard view - logged-in users only
 @login_required
 def dashboard(request):
@@ -60,30 +52,24 @@ def home(request):
 def transactions(request):
     transactions = Transaction.objects.filter(user=request.user).order_by("-date")
     return render(request, "transactions.html", {"transactions": transactions})
-
 # Chatbot view - OpenAI integration
-def chatbot(request):
-    bot_response = None
-
+def chatbot_query(request):
     if request.method == "POST":
-        user_message = request.POST.get("message")
-        api_key = os.getenv("TOGETHER_API_KEY")
+        user_query = request.POST.get("query")
+    else:
+        user_query = request.GET.get("query")
 
-        # Initialize Together client with the API key
-        client = Together(api_key=api_key)
+    if not user_query:
+        return render(request, "chatbot.html", {"bot_response": "Please enter a question!"})
 
-        # Call Llama 3.1 API via Together SDK
-        response = client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo-128K",
-            messages=[{"role": "user", "content": user_message}],
-            temperature=0.5,
-            max_tokens=500
-        )
+    response = get_rag_response(user_query)
 
-        # Extract the chatbot's response
-        bot_response = response.choices[0].message.content if response.choices else "No response from the AI."
+    # Format the response here if needed
+    bot_response2 = response.replace("\n", "<br>")  # Add line breaks for better readability
+    formatted_response = bot_response2.replace("**", "").replace("**", "")
 
-    return render(request, "chatbot.html", {"bot_response": bot_response})
+    return render(request, "chatbot.html", {"bot_response": formatted_response})
+
 # Registration view - Register a new user
 def register(request):
     if request.user.is_authenticated:
