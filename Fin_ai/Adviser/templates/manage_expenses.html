@@ -35,7 +35,7 @@
                 <tbody class="text-center">
                     {% for expense in expenses %}
                     <tr>
-                        <td>{{ expense.get_category_display }}</td>
+                        <td>{{ expense.category }}</td>
                         <td>₹{{ expense.amount }}</td>
                         <td>{{ expense.date }}</td>
                         <td>

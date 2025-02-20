@@ -22,7 +22,7 @@ class UserRegistrationForm(forms.ModelForm):
 class ExpenseForm(forms.ModelForm):
     class Meta:
         model = Expense
-        fields = ['category', 'amount', 'date']
+        fields = ['category', 'amount', 'date','name']
 
 
 class BudgetForm(forms.ModelForm):
