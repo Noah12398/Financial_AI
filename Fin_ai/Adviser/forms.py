@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from Adviser.models import Budget, Category, Expense
+from Adviser.models import Budget, Category, Expense, Transaction
 
 class UserRegistrationForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
@@ -32,8 +32,15 @@ class BudgetForm(forms.ModelForm):
 
     class Meta:
         model = Budget
-        fields = ['category', 'limit']
+        fields = ['category', 'limit', 'name']
         widgets = {
-            'category': forms.Select(attrs={'class': 'form-control'}),
+            'category': forms.Select(attrs={'class': 'form-control', 'onchange': 'updateBudgetName()'}),
             'limit': forms.NumberInput(attrs={'class': 'form-control'}),
+            'name': forms.HiddenInput(),  # Hide the name field
         }
+
+
+class TransactionForm(forms.ModelForm):
+    class Meta:
+        model = Transaction
+        fields = ['name', 'category', 'amount']

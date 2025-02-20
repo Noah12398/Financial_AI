@@ -90,21 +90,43 @@
         <h2>➕ Add New Transaction</h2>
         <form method="post" action="{% url 'add_transaction' %}">
             {% csrf_token %}
-            <select name="category" required>
+            
+            <!-- Category Selection -->
+            <select name="category_id" required onchange="updateCategoryName()">
                 <option value="" disabled selected>Select Category</option>
                 {% for category in categories %}
-                    <option value="{{ category.id }}">{{ category.name }}</option>
+                    <option value="{{ category.id }}" data-name="{{ category.name }}">{{ category.name }}</option>
                 {% endfor %}
             </select>
-
+    
+            <!-- Hidden Input for Category Name -->
+            <input type="hidden" name="category_name" id="category_name" required>
+    
+            <!-- Amount Input -->
             <input type="number" name="amount" step="0.01" placeholder="Amount" required>
-
+    
+            <!-- Description Input -->
             <input type="text" name="description" placeholder="Description" required>
-
+    
+            <!-- Submit Button -->
             <button type="submit">Add Transaction</button>
         </form>
+    
+        <!-- Back Link -->
         <a href="{% url 'transactions' %}">⬅️ Back to Transactions</a>
     </div>
 
 </body>
+<script>
+    function updateCategoryName() {
+        var select = document.querySelector("select[name='category_id']");
+        var selectedOption = select.options[select.selectedIndex];
+        var categoryNameInput = document.getElementById("category_name");
+        
+        if (selectedOption && categoryNameInput) {
+            categoryNameInput.value = selectedOption.getAttribute("data-name");
+        }
+    }
+</script>
+
 </html>

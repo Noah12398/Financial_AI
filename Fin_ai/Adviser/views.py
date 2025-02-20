@@ -110,7 +110,7 @@ def add_expense(request):
             expense = form.save(commit=False)
             expense.user = request.user  # Assign the logged-in user to the expense
             expense.save()
-            return redirect('transactions')  # Redirect to transactions page or another page
+            return redirect('manage_expenses')  # Redirect to transactions page or another page
     else:
         form = ExpenseForm()
     
@@ -209,22 +209,45 @@ def transactions_view(request):
     transactions = Transaction.objects.filter(user=request.user).order_by('-date')
     return render(request, 'transactions.html', {'transactions': transactions})
 
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .models import Transaction, Category
+from decimal import Decimal
+
 @login_required
 def add_transaction(request):
-    if request.method == 'POST':
-        category_id = request.POST.get('category')
+    if request.method == "POST":
+        category_id = request.POST.get('category_id')
         amount = request.POST.get('amount')
         description = request.POST.get('description')
+        name = request.POST.get('category_name')  # Correct
 
-        if category_id and amount and description:
-            category = Category.objects.get(id=category_id)
-            Transaction.objects.create( 
-                user=request.user,
-                category=category,
-                amount=amount,
-                description=description
-            )
-            return redirect('transactions')
+        # Validate that 'name' is not empty
+        if not name:
+            return render(request, 'add_transaction.html', {
+                'categories': Category.objects.all(),
+                'error': "Transaction name is required."
+            })
+
+        # Define category as None initially
+        category = None
+        if category_id:
+            try:
+                category = Category.objects.get(id=category_id)
+            except Category.DoesNotExist:
+                pass  # Leave category as None if not found
+
+        # Create and save the transaction
+        Transaction.objects.create(
+            user=request.user,
+            category=category,
+            amount=Decimal(amount),
+            description=description,
+            name=name  # Ensure this is passed
+        )
+
+        return redirect('transactions')  # Redirect to the transaction list page
+
     categories = Category.objects.all()
     return render(request, 'add_transaction.html', {'categories': categories})
 

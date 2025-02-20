@@ -19,7 +19,27 @@
             <!-- Form -->
             <form method="post" class="mb-3">
                 {% csrf_token %}
-                {{ form.as_p }}
+
+                <!-- Category Field -->
+                <div class="mb-3">
+                    <label for="category" class="form-label">Category</label>
+                    {{ form.category }}
+                </div>
+
+                <!-- Amount Field -->
+                <div class="mb-3">
+                    <label for="amount" class="form-label">Amount</label>
+                    {{ form.amount }}
+                </div>
+
+                <!-- Date Field -->
+                <div class="mb-3">
+                    <label for="date" class="form-label">Date</label>
+                    {{ form.date }}
+                </div>
+
+                <!-- Hidden Name Field -->
+                <input type="hidden" id="name" name="name" value="{{ form.instance.name }}">
 
                 <!-- Add Button -->
                 <div class="d-grid">
@@ -37,6 +57,22 @@
             </div>
         </div>
     </div>
+
+    <!-- JavaScript to update 'name' based on selected category -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var categorySelect = document.querySelector("select[name='category']");
+            var nameInput = document.querySelector("input[name='name']");
+
+            // Update 'name' field when category changes
+            categorySelect.addEventListener("change", function () {
+                var selectedOption = categorySelect.options[categorySelect.selectedIndex];
+                if (selectedOption) {
+                    nameInput.value = selectedOption.text; // Set name field to category name
+                }
+            });
+        });
+    </script>
 
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

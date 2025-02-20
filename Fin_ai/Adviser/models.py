@@ -34,7 +34,7 @@ class Transaction(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255)
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField(auto_now_add=True,editable=False)
     name = models.CharField(max_length=255)
 
     def __str__(self):

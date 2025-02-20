@@ -17,4 +17,18 @@
 
     <a href="{% url 'manage_budgets' %}" class="btn btn-secondary mt-3">Back to Budgets</a>
 </body>
+
+
+<script>
+    function updateBudgetName() {
+        var select = document.querySelector("select[name='category']");
+        var selectedOption = select.options[select.selectedIndex];
+        var nameInput = document.querySelector("input[name='name']");
+
+        if (selectedOption && nameInput) {
+            nameInput.value = selectedOption.text;  // Set name to category name
+        }
+    }
+</script>
+
 </html>
