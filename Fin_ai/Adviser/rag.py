@@ -1,4 +1,5 @@
 import os
+import sys
 import psycopg2
 import json
 from together import Together
@@ -18,91 +19,151 @@ client = Together(api_key=API_KEY)
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Connect to PostgreSQL
-conn = psycopg2.connect(
-    dbname=os.getenv('DATABASE_NAME'), 
-    user=os.getenv('DATABASE_USER'), 
-    password=os.getenv('DATABASE_PASSWORD'), 
-    host=os.getenv('DATABASE_HOST'), 
-    port=os.getenv('DATABASE_PORT'),
-    keepalives=1,
-    keepalives_idle=30,
-    keepalives_interval=10,
-    keepalives_count=5
-)
-cur = conn.cursor()
+def get_db_connection():
+    return psycopg2.connect(
+        dbname=os.getenv('DATABASE_NAME'), 
+        user=os.getenv('DATABASE_USER'), 
+        password=os.getenv('DATABASE_PASSWORD'), 
+        host=os.getenv('DATABASE_HOST'), 
+        port=os.getenv('DATABASE_PORT'),
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5
+    )
 
-# Build FAISS index from both Adviser_transaction and budget tables
 def build_faiss_index():
-    # Fetch data from Adviser_transaction table
-    cur.execute('SELECT category_id, description FROM "Adviser_transaction"')
-    transaction_data = cur.fetchall()
-    
-    # Fetch data from budget table
-    cur.execute('SELECT  category_id, "limit" FROM "BudgetTable"')
-    budget_data = cur.fetchall()
+    conn = get_db_connection()
+    cur = conn.cursor()
 
-    cur.execute('SELECT id, name FROM "Adviser_category"')
-    category_data = cur.fetchall()
+    try:
+        # Fetch data from Adviser_transaction table
+        cur.execute('SELECT id, name, description, amount FROM "Adviser_transaction"')
+        transaction_data = cur.fetchall()
+        
+        # Fetch data from BudgetTable
+        cur.execute('SELECT id, category_id, name, "limit" FROM "BudgetTable"')
+        budget_data = cur.fetchall()
+        
+        # Fetch data from Adviser_category
+        cur.execute('SELECT id, name FROM "Adviser_category"')
+        category_data = cur.fetchall()
+
+        # Create a mapping of category_id to category_name
+        category_dict = {id_: name for id_, name in category_data}
+
+        # Combine all data into a unified format
+        # Combine transaction and budget data in a meaningful way
+        all_data = []
+
+        # Format transaction data with budget limits for better embeddings
+        # Format transaction data with budget association
+        for id_, name, description, amount in transaction_data:
+            # Find matching budget category
+            budget_limit = "No budget set"
+            for budget_id, category_id, budget_name, limit in budget_data:
+                if name.lower() == budget_name.lower():  # Match transaction name with budget category name
+                    budget_limit = f"Budget Limit: {limit}"
+                    break  # Stop searching once a match is found
+
+            text = f"Transaction: {name}, Description: {description}, Amount Spent: {amount}, {budget_limit}"
+            all_data.append((id_, text))
+
+        # Format budget data independently (if needed)
+        for id_, category_id, name, limit in budget_data:
+            category_name = category_dict.get(category_id, "Unknown Category")
+            text = f"Category: {name}, Budget Limit: {limit}"
+            all_data.append((id_, text))
+
+        if not all_data:
+            raise ValueError("No data found in the database to build the index.")
+
+        descriptions = [str(item[1]) for item in all_data]  # Extract text descriptions
+        embeddings = np.array([model.encode(desc) for desc in descriptions], dtype=np.float32)
 
 
-    if not transaction_data and not budget_data:
-        raise ValueError("No data found in the database to build the index.")
+        # Print the embeddings and their corresponding text
+        print("\nGenerated Embeddings:")
+        for text, embedding in zip(descriptions, embeddings):
+            print(f"Text: {text}")
+            print(f"Embedding: {embedding[:5]} ... (truncated)\n")  # Print first 5 values for readability
+            sys.stdout.flush()  # Force the output to be written immediately
 
-    all_data = transaction_data + budget_data + category_data
-    descriptions = [desc for _, desc in all_data]
-    
-    # Generate embeddings for all descriptions
-    embeddings = np.array([model.encode(str(desc)) for desc in descriptions], dtype=np.float32)
+        # Build and save FAISS index
+        index = faiss.IndexFlatL2(embeddings.shape[1])
+        index.add(embeddings)
+        faiss.write_index(index, "financial_data.index")
 
-    # Build and save FAISS index
-    index = faiss.IndexFlatL2(embeddings.shape[1])
-    index.add(embeddings)
-    faiss.write_index(index, "financial_data.index")
+        # Save index-to-ID mapping in JSON format
+        index_mapping = {idx: id_ for idx, (id_, _) in enumerate(all_data)}
+        with open("index_mapping.json", "w") as f:
+            json.dump(index_mapping, f)
 
-    # Save index-to-ID mapping (including both tables)
-    with open("index_mapping.txt", "w") as f:
-        for idx, (id, _) in enumerate(all_data):
-            f.write(f"{idx},{id}\n")
+    finally:
+        cur.close()
+        conn.close()
+
 
 # Query Meta-LLaMA 3.1 via Together AI
 def query_llama3(prompt):
-    response = client.chat.completions.create(
-        model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo-128K",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=500,
-        temperature=0.5,
-        top_p=0.9
-    )
-    return response.choices[0].message.content if response.choices else "No response received."
+    try:
+        response = client.chat.completions.create(
+            model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo-128K",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.5,
+            top_p=0.9
+        )
+        return response.choices[0].message.content if response.choices else "No response received."
+    except Exception as e:
+        return f"Error in LLaMA API: {str(e)}"
 
 # Generate RAG response
 def get_rag_response(query):
     # Load FAISS index
-    index = faiss.read_index("financial_data.index")
+    try:
+        index = faiss.read_index("financial_data.index")
+    except Exception as e:
+        return f"Error loading FAISS index: {str(e)}"
+
     query_embedding = model.encode(query).reshape(1, -1).astype(np.float32)
 
     # Search for the top 5 similar entries
-    distances, indices = index.search(query_embedding, k=5)
+    distances, indices = index.search(query_embedding, k=11)
 
-    # Retrieve context from both Adviser_transaction and budget tables
+    # Retrieve context from both Adviser_transaction and BudgetTable
     context = []
-    with open("index_mapping.txt", "r") as f:
-        index_map = {int(line.split(",")[0]): int(line.split(",")[1]) for line in f}
     
-    for idx in indices[0]:
-        db_id = index_map.get(idx)
-        if db_id is not None:
-            # Check if the ID belongs to Adviser_transaction or budget table
-            cur.execute('SELECT description FROM "Adviser_transaction" WHERE id = %s', (db_id,))
-            result = cur.fetchone()
-            if result:
-                context.append(result[0])
-            else:
-                # If not found in Adviser_transaction, check in budget table
-                cur.execute('SELECT description FROM "budget" WHERE id = %s', (db_id,))
+    try:
+        with open("index_mapping.json", "r") as f:
+            index_map = json.load(f)
+    except Exception as e:
+        return f"Error loading index mapping: {str(e)}"
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        context = set()  # Change list to set to prevent duplicates
+
+        for idx in indices[0]:
+            db_id = index_map.get(str(idx))  # JSON keys are stored as strings
+            if db_id is not None:
+                cur.execute('SELECT description, name, amount FROM "Adviser_transaction" WHERE id = %s', (db_id,))
                 result = cur.fetchone()
                 if result:
-                    context.append(result[0])
+                    description, name, amount = result
+                    context.add(f"{description}, Amount: {amount}, Category: {name}")  # Use .add() to avoid duplicates
+
+                cur.execute('SELECT name, "limit" FROM "BudgetTable" WHERE id = %s', (db_id,))
+                result = cur.fetchone()
+                if result:
+                    name, limit = result
+                    context.add(f"Budget Category: {name}, Limit: {limit}")  # Use .add() to avoid duplicates
+
+    finally:
+        cur.close()
+        conn.close()
 
     # Construct prompt with context
     context_text = "\n".join(context)
@@ -114,9 +175,3 @@ def get_rag_response(query):
 # Build the index if needed
 if not os.path.exists("financial_data.index"):
     build_faiss_index()
-
-# # Test the RAG pipeline
-# user_query = "Where did I overspent?"
-# response = get_rag_response(user_query)
-# print(response)
-
