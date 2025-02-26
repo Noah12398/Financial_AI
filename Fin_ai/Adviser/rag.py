@@ -7,6 +7,7 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import faiss
 from dotenv import load_dotenv
+from collections import defaultdict
 
 # Load environment variables
 load_dotenv()
@@ -37,57 +38,65 @@ def build_faiss_index():
     cur = conn.cursor()
 
     try:
-        # Fetch data from Adviser_transaction table
-        cur.execute('SELECT id, name, description, amount FROM "Adviser_transaction"')
-        transaction_data = cur.fetchall()
-        
-        # Fetch data from BudgetTable
-        cur.execute('SELECT id, category_id, name, "limit" FROM "BudgetTable"')
-        budget_data = cur.fetchall()
-        
-        # Fetch data from Adviser_category
+        # Fetch category data first
         cur.execute('SELECT id, name FROM "Adviser_category"')
         category_data = cur.fetchall()
+        category_dict = {id_: name for id_, name in category_data}  # {category_id: category_name}
 
-        # Create a mapping of category_id to category_name
-        category_dict = {id_: name for id_, name in category_data}
+        # Dictionary to store categorized data
+        category_data_dict = defaultdict(lambda: {"transactions": [], "expenses": [], "budget": "No budget set"})
 
-        # Combine all data into a unified format
-        # Combine transaction and budget data in a meaningful way
+        # Fetch budget data
+        cur.execute('SELECT id, category_id, name, "limit" FROM "BudgetTable"')
+        budget_data = cur.fetchall()
+        for _, category_id, name, limit in budget_data:
+            category_name = category_dict.get(category_id, "Uncategorized")
+            category_data_dict[category_name]["budget"] = f"Budget Limit: {limit}"
+
+        # Fetch transaction data
+        cur.execute('SELECT id, category_id, description, amount FROM "Adviser_transaction"')
+        transaction_data = cur.fetchall()
+        for _, category_id, description, amount in transaction_data:
+            category_name = category_dict.get(category_id, "Uncategorized")
+            transaction_text = f"Transaction: {description}, Transactions_Amount: {amount}"
+            category_data_dict[category_name]["transactions"].append(transaction_text)
+
+        # Fetch expense data
+        cur.execute('SELECT id, category_id, name, amount FROM "Adviser_expense"')
+        expense_data = cur.fetchall()
+        for _, category_id, name, amount in expense_data:
+            category_name = category_dict.get(category_id, "Uncategorized")
+            expense_text = f"Expense: {name}, Expense_Amount: {amount}"
+            category_data_dict[category_name]["expenses"].append(expense_text)
+
+        # Merge all data
         all_data = []
+        for category, details in category_data_dict.items():
+            transactions_text = " | ".join(details["transactions"]) if details["transactions"] else "No transactions"
+            expenses_text = " | ".join(details["expenses"]) if details["expenses"] else "No expenses"
+            budget_text = details["budget"]
 
-        # Format transaction data with budget limits for better embeddings
-        # Format transaction data with budget association
-        for id_, name, description, amount in transaction_data:
-            # Find matching budget category
-            budget_limit = "No budget set"
-            for budget_id, category_id, budget_name, limit in budget_data:
-                if name.lower() == budget_name.lower():  # Match transaction name with budget category name
-                    budget_limit = f"Budget Limit: {limit}"
-                    break  # Stop searching once a match is found
+            # Calculate total amounts
+            total_transactions_amount = sum(float(tx.split("Transactions_Amount: ")[1]) for tx in details["transactions"] if "Transactions_Amount: " in tx)
+            total_expenses_amount = sum(float(exp.split("Expense_Amount: ")[1]) for exp in details["expenses"] if "Expense_Amount: " in exp)
 
-            text = f"Transaction: {name}, Description: {description}, Amount Spent: {amount}, {budget_limit}"
-            all_data.append((id_, text))
+            final_text = f"Category: {category}, {budget_text}, Transactions: {transactions_text}, Expenses: {expenses_text}, Total Amount: {total_transactions_amount + total_expenses_amount}"
+            all_data.append((category, final_text))
 
-        # Format budget data independently (if needed)
-        for id_, category_id, name, limit in budget_data:
-            category_name = category_dict.get(category_id, "Unknown Category")
-            text = f"Category: {name}, Budget Limit: {limit}"
-            all_data.append((id_, text))
-
+        # Ensure there's data
         if not all_data:
             raise ValueError("No data found in the database to build the index.")
 
-        descriptions = [str(item[1]) for item in all_data]  # Extract text descriptions
+        # Create embeddings
+        descriptions = [str(item[1]) for item in all_data]
         embeddings = np.array([model.encode(desc) for desc in descriptions], dtype=np.float32)
 
-
-        # Print the embeddings and their corresponding text
+        # Print debug info
         print("\nGenerated Embeddings:")
         for text, embedding in zip(descriptions, embeddings):
             print(f"Text: {text}")
-            print(f"Embedding: {embedding[:5]} ... (truncated)\n")  # Print first 5 values for readability
-            sys.stdout.flush()  # Force the output to be written immediately
+            print(f"Embedding: {embedding[:5]} ... (truncated)\n")
+            sys.stdout.flush()
 
         # Build and save FAISS index
         index = faiss.IndexFlatL2(embeddings.shape[1])
@@ -102,7 +111,6 @@ def build_faiss_index():
     finally:
         cur.close()
         conn.close()
-
 
 # Query Meta-LLaMA 3.1 via Together AI
 def query_llama3(prompt):
@@ -120,20 +128,16 @@ def query_llama3(prompt):
 
 # Generate RAG response
 def get_rag_response(query):
-    # Load FAISS index
     try:
         index = faiss.read_index("financial_data.index")
     except Exception as e:
         return f"Error loading FAISS index: {str(e)}"
 
     query_embedding = model.encode(query).reshape(1, -1).astype(np.float32)
+    distances, indices = index.search(query_embedding, k=5)
 
-    # Search for the top 5 similar entries
-    distances, indices = index.search(query_embedding, k=11)
+    context = set()
 
-    # Retrieve context from both Adviser_transaction and BudgetTable
-    context = []
-    
     try:
         with open("index_mapping.json", "r") as f:
             index_map = json.load(f)
@@ -144,32 +148,28 @@ def get_rag_response(query):
     cur = conn.cursor()
 
     try:
-        context = set()  # Change list to set to prevent duplicates
-
         for idx in indices[0]:
-            db_id = index_map.get(str(idx))  # JSON keys are stored as strings
+            db_id = index_map.get(str(idx))
             if db_id is not None:
                 cur.execute('SELECT description, name, amount FROM "Adviser_transaction" WHERE id = %s', (db_id,))
                 result = cur.fetchone()
                 if result:
                     description, name, amount = result
-                    context.add(f"{description}, Amount: {amount}, Category: {name}")  # Use .add() to avoid duplicates
+                    context.add(f"{description}, Amount: {amount}, Category: {name}")
 
                 cur.execute('SELECT name, "limit" FROM "BudgetTable" WHERE id = %s', (db_id,))
                 result = cur.fetchone()
                 if result:
                     name, limit = result
-                    context.add(f"Budget Category: {name}, Limit: {limit}")  # Use .add() to avoid duplicates
+                    context.add(f"Budget Category: {name}, Limit: {limit}")
 
     finally:
         cur.close()
         conn.close()
 
-    # Construct prompt with context
     context_text = "\n".join(context)
     prompt = f"Given the following context, answer the question based solely on the provided information:\nContext: {context_text}\nQuestion: {query}\nAnswer:"
-    
-    # Query the model
+
     return query_llama3(prompt)
 
 # Build the index if needed
