@@ -18,6 +18,7 @@ urlpatterns = [
     path('budgets/delete/<int:budget_id>/', views.delete_budget, name='delete_budget'),
     path('add_category/', views.add_category, name='add_category'),
     path('transactions/', views.transactions_view, name='transactions'),
+    path('transactions/edit/<int:transaction_id>/', views.edit_transaction, name='edit_transaction'),
     path('transactions/add/', views.add_transaction, name='add_transaction'),
     path('transactions/delete/<int:transaction_id>/', views.delete_transaction, name='delete_transaction'),
     path('chatbot/', views.chatbot_query, name='chatbot_query'),

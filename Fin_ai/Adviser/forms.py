@@ -22,7 +22,13 @@ class UserRegistrationForm(forms.ModelForm):
 class ExpenseForm(forms.ModelForm):
     class Meta:
         model = Expense
-        fields = ['category', 'amount', 'date','name']
+        fields = ['category', 'amount', 'date', 'name']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'amount': forms.NumberInput(attrs={'class': 'form-control'}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),  # Add this line
+        }
 
 
 class BudgetForm(forms.ModelForm):
@@ -43,4 +49,4 @@ class BudgetForm(forms.ModelForm):
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
-        fields = ['name', 'category', 'amount']
+        fields = ['name', 'category', 'amount','description']

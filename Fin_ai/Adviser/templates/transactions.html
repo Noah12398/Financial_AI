@@ -59,8 +59,12 @@
             transform: translateY(-5px);
         }
 
-        .delete-btn {
-            background: #FF4B5C;
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .edit-btn, .delete-btn {
             border: none;
             color: #FFFFFF;
             padding: 0.5rem 1rem;
@@ -68,6 +72,18 @@
             cursor: pointer;
             transition: background 0.3s;
             font-size: 0.9rem;
+        }
+
+        .edit-btn {
+            background: #00BFFF;
+        }
+
+        .edit-btn:hover {
+            background: #009ACD;
+        }
+
+        .delete-btn {
+            background: #FF4B5C;
         }
 
         .delete-btn:hover {
@@ -108,10 +124,16 @@
                             <strong>{{ transaction.date }}</strong><br>
                             {{ transaction.category }}: ${{ transaction.amount }}
                         </div>
-                        <form action="{% url 'delete_transaction' transaction.id %}" method="get" style="display:inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="delete-btn">🗑️ Delete</button>
-                        </form>
+                        <div class="button-group">
+                            <!-- Edit Button -->
+                            <a href="{% url 'edit_transaction' transaction.id %}" class="edit-btn">✏️ Edit</a>
+
+                            <!-- Delete Button -->
+                            <form action="{% url 'delete_transaction' transaction.id %}" method="get" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="delete-btn">🗑️ Delete</button>
+                            </form>
+                        </div>
                     </li>
                 {% endfor %}
             </ul>

@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
 import requests
-from .forms import BudgetForm
+from .forms import BudgetForm, TransactionForm
 from together import Together
 
 from Adviser.forms import ExpenseForm, UserRegistrationForm
@@ -250,6 +250,20 @@ def add_transaction(request):
 
     categories = Category.objects.all()
     return render(request, 'add_transaction.html', {'categories': categories})
+
+@login_required
+def edit_transaction(request, transaction_id):
+    transaction = get_object_or_404(Transaction, id=transaction_id, user=request.user)
+
+    if request.method == 'POST':
+        form = TransactionForm(request.POST, instance=transaction)
+        if form.is_valid():
+            form.save()
+            return redirect('transactions')  # Redirect to transaction list
+    else:
+        form = TransactionForm(instance=transaction)
+
+    return render(request, 'edit_transaction.html', {'form': form})
 
 @login_required
 def delete_transaction(request, transaction_id):

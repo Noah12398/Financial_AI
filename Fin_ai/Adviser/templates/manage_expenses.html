@@ -9,13 +9,135 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-</head>
-<body class="bg-light text-dark">
 
-    <div class="container py-5">
+    <style>
+        /* Dark Theme Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0F111A;
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+        }
+
+
+        /* Styling the table */
+        /* Ensure table background is dark */
+        .table {
+            background-color: #1C1E2A !important;
+            color: #FFFFFF !important;
+        }
+
+        /* Table head */
+        .table thead th {
+            background-color: #3A3C58 !important;
+            color: #FFFFFF !important;
+        }
+
+        /* Table body cells */
+        .table tbody tr td {
+            background-color: #2B2D42 !important; /* Dark background for cells */
+            color: #FFFFFF !important; /* Ensure text color is white */
+        }
+
+        /* Hover effect */
+        .table-hover tbody tr:hover td {
+            background-color: #44475A !important;
+        }
+
+        /* Borders */
+        .table-bordered, .table th, .table td {
+            border-color: #333 !important;
+        }
+
+
+        /* Buttons */
+        .btn-primary {
+            background-color: #3A3C58 !important;
+            border-color: #575A7B !important;
+        }
+
+        .btn-primary:hover {
+            background-color: #575A7B !important;
+        }
+
+        .btn-danger {
+            background-color: #3A3C58 !important;
+            border-color: #575A7B !important;
+        }
+
+        .btn-danger:hover {
+            background-color: #575A7B !important;
+        }
+
+        .container {
+            background: #1C1E2A;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+            max-width: 900px;
+        }
+
+        h2 {
+            color: #00FFB6;
+            font-size: 2rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
+        }
+
+        .btn-success, .btn-primary, .btn-danger {
+            border-radius: 10px;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .btn-success:hover {
+            background: #00CC99;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:hover {
+            background: #007BFF;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger:hover {
+            background: #E03E4D;
+            transform: translateY(-2px);
+        }
+
+        table {
+            background: #282A36;
+            color: #FFFFFF;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        thead {
+            background: #3A3C58;
+        }
+
+        tbody tr:hover {
+            background: #44475A;
+            transition: background 0.3s;
+        }
+
+        footer {
+            color: #A0A0A0;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mt-5">
         <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-primary fw-bold"><i class="fas fa-wallet"></i> Manage Expenses</h2>
+            <h2><i class="fas fa-wallet"></i> Manage Expenses</h2>
             <a href="{% url 'add_expense' %}" class="btn btn-success shadow-sm">
                 <i class="fas fa-plus-circle"></i> Add Expense
             </a>
@@ -23,8 +145,8 @@
 
         <!-- Expense Table -->
         <div class="table-responsive">
-            <table class="table table-striped table-hover border shadow-sm rounded">
-                <thead class="table-dark text-center">
+            <table class="table table-hover text-center">
+                <thead class="table-dark">
                     <tr>
                         <th>📂 Category</th>
                         <th>💰 Amount</th>
@@ -32,7 +154,7 @@
                         <th>⚙️ Actions</th>
                     </tr>
                 </thead>
-                <tbody class="text-center">
+                <tbody>
                     {% for expense in expenses %}
                     <tr>
                         <td>{{ expense.category }}</td>
