@@ -124,6 +124,21 @@
         footer {
             color: #A0A0A0;
         }
+        .add-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: #FFFFFF;
+            text-decoration: none;
+            background-color: #3A3C58;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            transition: background 0.3s;
+        }
+
+        .add-link:hover {
+            background-color: #575A7B;
+        }
+
 
         @media (max-width: 768px) {
             .container {
@@ -183,11 +198,13 @@
                 </tbody>
             </table>
         </div>
+        <a href="{% url 'dashboard' %}" class="add-link">⬅️ Back to Dashboard</a>
 
         <!-- Footer -->
-        <footer class="mt-5 text-center text-muted small">
+        <footer class="mt-5 text-center small" style="color: #ffffff; font-weight: 500; text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);">
             &copy; 2025 FinancialAI | Smart Finance Assistant 🧠💸
         </footer>
+        
     </div>
 
     <!-- Bootstrap JS Bundle -->
