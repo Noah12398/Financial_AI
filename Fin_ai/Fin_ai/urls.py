@@ -24,3 +24,4 @@ urlpatterns = [
     path('Adviser/', include('django.contrib.auth.urls')),  # Add this line
 
 ]
+
