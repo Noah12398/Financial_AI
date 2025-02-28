@@ -25,13 +25,12 @@ jobs:
 
     - name: Create .env file
       run: |
-        echo "DATABASE_NAME=${{ secrets.DATABASE_NAME }}" >> .env
-        echo "DATABASE_USER=${{ secrets.DATABASE_USER }}" >> .env
+        echo "DATABASE_NAME=${{ vars.DATABASE_NAME }}" >> .env
+        echo "DATABASE_USER=${{ vars.DATABASE_USER }}" >> .env
         echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> .env
-        echo "DATABASE_HOST=${{ secrets.DATABASE_HOST }}" >> .env
-        echo "DATABASE_PORT=${{ secrets.DATABASE_PORT }}" >> .env
+        echo "DATABASE_HOST=${{ vars.DATABASE_HOST }}" >> .env
+        echo "DATABASE_PORT=${{ vars.DATABASE_PORT }}" >> .env
         echo "TOGETHER_API_KEY=${{ secrets.TOGETHER_API_KEY }}" >> .env
-        echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> .env
         echo "DEBUG=${{ secrets.DEBUG }}" >> .env
       shell: bash
 
