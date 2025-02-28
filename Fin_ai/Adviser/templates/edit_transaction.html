@@ -24,11 +24,12 @@
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
             width: 400px;
             text-align: center;
+            padding: 2rem;
         }
 
         .card-header {
             background: #2B2D42;
-            color: #FFA500;
+            color:  #00FFB6;
             border-radius: 16px 16px 0 0;
             padding: 1rem;
             font-size: 1.3rem;
@@ -39,6 +40,7 @@
             text-align: left;
             display: block;
             margin-bottom: 0.5rem;
+            font-weight: 500;
         }
 
         select, input, textarea {
@@ -58,22 +60,36 @@
             transform: translateY(-3px);
         }
 
-        button {
+        .btn-primary, .btn-secondary {
             margin-top: 1.5rem;
-            background-color: #FFA500;
-            color: #000;
-            border: none;
             padding: 0.75rem 1.5rem;
             border-radius: 12px;
-            cursor: pointer;
-            transition: background 0.3s, transform 0.3s;
             font-size: 1.1rem;
             width: 100%;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.3s, background 0.3s;
         }
 
-        button:hover {
-            background-color: #E69500;
-            transform: translateY(-5px);
+        .btn-primary {
+            background-color:  #00FFB6;
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background-color:  #24fcbf;
+            transform: translateY(-3px);
+        }
+
+        .btn-secondary {
+            background-color: #2B2D42;
+            color: #00FFB6;
+            margin-top: 0.75rem;
+        }
+
+        .btn-secondary:hover {
+            background-color: #3C3E52;
+            transform: translateY(-3px);
         }
     </style>
 </head>
@@ -104,8 +120,13 @@
                 <!-- Hidden input for 'name' -->
                 <input type="hidden" id="name" name="name" value="{{ form.instance.name }}">
             
-                <button type="submit">Save Changes</button>
+                <button type="submit" class="btn-primary">Save Changes</button>
             </form>
+
+            <!-- Back to Transactions Button -->
+            <a href="{% url 'transactions' %}">
+                <button class="btn-secondary">🔙 Back to Transactions</button>
+            </a>
         </div>
     </div>
 
@@ -115,11 +136,10 @@
             var categorySelect = document.querySelector("select[name='category']");
             var nameInput = document.querySelector("input[name='name']");
 
-            // Update 'name' field when category changes
             categorySelect.addEventListener("change", function () {
                 var selectedOption = categorySelect.options[categorySelect.selectedIndex];
                 if (selectedOption) {
-                    nameInput.value = selectedOption.text; // Set name field to category name
+                    nameInput.value = selectedOption.text;
                 }
             });
         });

@@ -5,34 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Transactions</title>
     <style>
+        /* Dark theme with modern professional layout */
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0F111A;
-            color: #FFFFFF;
-            text-align: center;
             margin: 0;
             padding: 0;
+            height: 100vh;
+            background-color: #0F111A;
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
         }
 
         .container {
-            max-width: 600px;
+            max-width: 700px;
             width: 90%;
-            margin: 0 auto;
             background: #1C1E2A;
             border: 1px solid #333;
-            border-radius: 20px;
+            border-radius: 16px;
             padding: 2rem;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
-            text-align: left;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+            text-align: center;
         }
 
         h2 {
+            font-size: 2rem;
             margin-bottom: 1.5rem;
-            color: #FFFFFF;
             border-bottom: 2px solid #333;
             padding-bottom: 1rem;
         }
@@ -45,7 +44,7 @@
 
         li {
             background: #2B2D42;
-            margin: 0.5rem 0;
+            margin: 0.75rem 0;
             padding: 1rem;
             border-radius: 12px;
             display: flex;
@@ -57,6 +56,14 @@
 
         li:hover {
             transform: translateY(-5px);
+        }
+
+        .transaction-info {
+            text-align: left;
+        }
+
+        .transaction-info strong {
+            color: #00FFB6;
         }
 
         .button-group {
@@ -75,19 +82,19 @@
         }
 
         .edit-btn {
-            background: #00BFFF;
+            background: #3A3C58;
         }
 
         .edit-btn:hover {
-            background: #009ACD;
+            background: #575A7B;
         }
 
         .delete-btn {
-            background: #FF4B5C;
+            background: #3A3C58;
         }
 
         .delete-btn:hover {
-            background: #E03E4D;
+            background: #575A7B;
         }
 
         .add-link {
@@ -110,6 +117,25 @@
             margin-top: 2rem;
             color: #aaa;
         }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+                padding: 1.5rem;
+            }
+            
+            li {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .button-group {
+                margin-top: 10px;
+                width: 100%;
+                display: flex;
+                justify-content: space-between;
+            }
+        }
     </style>
 </head>
 <body>
@@ -120,7 +146,7 @@
             <ul>
                 {% for transaction in transactions %}
                     <li>
-                        <div>
+                        <div class="transaction-info">
                             <strong>{{ transaction.date }}</strong><br>
                             {{ transaction.category }}: ${{ transaction.amount }}
                         </div>
@@ -129,7 +155,7 @@
                             <a href="{% url 'edit_transaction' transaction.id %}" class="edit-btn">✏️ Edit</a>
 
                             <!-- Delete Button -->
-                            <form action="{% url 'delete_transaction' transaction.id %}" method="get" style="display:inline;">
+                            <form action="{% url 'delete_transaction' transaction.id %}" method="post" style="display:inline;">
                                 {% csrf_token %}
                                 <button type="submit" class="delete-btn">🗑️ Delete</button>
                             </form>
@@ -141,7 +167,8 @@
             <p class="no-transactions">No transactions found.</p>
         {% endif %}
         <a href="{% url 'add_transaction' %}" class="add-link">➕ Add Transaction</a>
-    </div>
+        <a href="{% url 'dashboard' %}" class="add-link">⬅️ Back to Dashboard</a>
+            </div>
 
 </body>
 </html>

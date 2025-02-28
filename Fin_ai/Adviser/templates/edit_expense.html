@@ -9,12 +9,118 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-</head>
-<body class="bg-light text-dark">
 
-    <div class="container vh-100 d-flex justify-content-center align-items-center">
-        <div class="card shadow-lg p-4" style="width: 100%; max-width: 450px;">
-            <h3 class="text-center mb-4 text-primary"><i class="fas fa-edit"></i> Edit Expense</h3>
+    <style>
+        /* Dark gradient background */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0D0F1A, #1A1C2E);
+            color: #FFFFFF;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+        }
+
+        /* Styled card */
+        .card {
+            background: linear-gradient(145deg, #181A2B, #0F111A);
+            border: 1px solid #222;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+            padding: 2rem;
+            width: 100%;
+            max-width: 450px;
+            transition: transform 0.3s ease;
+            text-align: center; /* Ensures form elements are centered */
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* Title */
+        h3 {
+            color: #00FFB6;
+            text-shadow: 0 0 8px rgba(0, 255, 182, 0.8);
+        }
+
+        /* Ensure input fields match dark theme */
+input, select {
+    background: #202230 !important; /* Dark background */
+    color: #FFFFFF !important; /* White text */
+    border: 1px solid #333 !important;
+    padding: 0.7rem;
+    border-radius: 10px;
+    outline: none;
+    box-shadow: inset 0 0 5px #000 !important; /* Prevents white shadow */
+    transition: background 0.3s, border 0.3s;
+    width: 100%;
+    text-align: center;
+}
+
+/* Change background on focus */
+input:focus, select:focus {
+    background: #2B2D42 !important;
+    border: 1px solid #00FFB6 !important;
+    box-shadow: 0 0 8px rgba(0, 255, 182, 0.7) !important;
+}
+
+/* Remove white background from autofill in Chrome */
+input:-webkit-autofill, 
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    background: #202230 !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 0 0px 1000px #202230 inset !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
+
+
+        label {
+            font-weight: 600;
+            display: block;
+            text-align: center; /* Ensures labels are centered */
+        }
+
+        /* Buttons */
+        .btn-success {
+            background: linear-gradient(135deg, #00FFB6, #00D49F);
+            border: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 0.7rem;
+            border-radius: 10px;
+            transition: background 0.3s, transform 0.2s;
+            width: 100%;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #00E6A4, #00B386);
+            transform: translateY(-2px);
+        }
+
+        /* Back button */
+        .btn-outline-secondary {
+            color: #00FFB6;
+            border-color: #00FFB6;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        .btn-outline-secondary:hover {
+            background: #00FFB6;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container d-flex justify-content-center align-items-center vh-100">
+        <div class="card">
+            <h3 class="mb-4"><i class="fas fa-edit"></i> Edit Expense</h3>
 
             <!-- Form -->
             <form method="post">
