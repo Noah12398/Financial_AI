@@ -24,4 +24,3 @@ urlpatterns = [
     path('chatbot/', views.chatbot_query, name='chatbot_query'),
 ]
 
-
