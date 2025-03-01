@@ -1,23 +1,12 @@
 import os
 import sys
-import psycopg2
 import json
-from together import Together
-from sentence_transformers import SentenceTransformer
-import numpy as np
-import faiss
-from dotenv import load_dotenv
+import psycopg2
 from collections import defaultdict
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-
-# Initialize Together client
-API_KEY = os.getenv("TOGETHER_API_KEY")
-client = Together(api_key=API_KEY)
-
-# Initialize Sentence Transformer model
-model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Connect to PostgreSQL
 def get_db_connection():
@@ -33,7 +22,25 @@ def get_db_connection():
         keepalives_count=5
     )
 
+# Lazy load ML components only when needed
+def get_model():
+    from sentence_transformers import SentenceTransformer
+    return SentenceTransformer('all-MiniLM-L6-v2')
+
+def get_together_client():
+    from together import Together
+    API_KEY = os.getenv("TOGETHER_API_KEY")
+    return Together(api_key=API_KEY)
+
 def build_faiss_index():
+    # Import heavy libraries only when this function is called
+    import numpy as np
+    import faiss
+    from sentence_transformers import SentenceTransformer
+    
+    # Get model only when needed
+    model = get_model()
+    
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -115,6 +122,9 @@ def build_faiss_index():
 # Query Meta-LLaMA 3.1 via Together AI
 def query_llama3(prompt):
     try:
+        # Lazy load client
+        client = get_together_client()
+        
         response = client.chat.completions.create(
             model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo-128K",
             messages=[{"role": "user", "content": prompt}],
@@ -128,50 +138,66 @@ def query_llama3(prompt):
 
 # Generate RAG response
 def get_rag_response(query):
+    # Import heavy libraries only when function is called
+    import numpy as np
+    import faiss
+    
     try:
-        index = faiss.read_index("financial_data.index")
+        # Load model only when needed
+        model = get_model()
+        
+        try:
+            index = faiss.read_index("financial_data.index")
+        except Exception as e:
+            # Build index if it doesn't exist
+            print(f"Error loading index: {str(e)}, attempting to build index...")
+            build_faiss_index()
+            try:
+                index = faiss.read_index("financial_data.index")
+            except Exception as e2:
+                return f"Failed to build or load index: {str(e2)}"
+
+        query_embedding = model.encode(query).reshape(1, -1).astype(np.float32)
+        distances, indices = index.search(query_embedding, k=5)
+
+        context = set()
+
+        try:
+            with open("index_mapping.json", "r") as f:
+                index_map = json.load(f)
+        except Exception as e:
+            return f"Error loading index mapping: {str(e)}"
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        try:
+            for idx in indices[0]:
+                db_id = index_map.get(str(idx))
+                if db_id is not None:
+                    cur.execute('SELECT description, name, amount FROM "Adviser_transaction" WHERE id = %s', (db_id,))
+                    result = cur.fetchone()
+                    if result:
+                        description, name, amount = result
+                        context.add(f"{description}, Amount: {amount}, Category: {name}")
+
+                    cur.execute('SELECT name, "limit" FROM "BudgetTable" WHERE id = %s', (db_id,))
+                    result = cur.fetchone()
+                    if result:
+                        name, limit = result
+                        context.add(f"Budget Category: {name}, Limit: {limit}")
+
+        finally:
+            cur.close()
+            conn.close()
+
+        context_text = "\n".join(context)
+        prompt = f"Given the following context, answer the question based solely on the provided information:\nContext: {context_text}\nQuestion: {query}\nAnswer:"
+
+        return query_llama3(prompt)
+    
     except Exception as e:
-        return f"Error loading FAISS index: {str(e)}"
+        return f"Error in RAG processing: {str(e)}"
 
-    query_embedding = model.encode(query).reshape(1, -1).astype(np.float32)
-    distances, indices = index.search(query_embedding, k=5)
-
-    context = set()
-
-    try:
-        with open("index_mapping.json", "r") as f:
-            index_map = json.load(f)
-    except Exception as e:
-        return f"Error loading index mapping: {str(e)}"
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-
-    try:
-        for idx in indices[0]:
-            db_id = index_map.get(str(idx))
-            if db_id is not None:
-                cur.execute('SELECT description, name, amount FROM "Adviser_transaction" WHERE id = %s', (db_id,))
-                result = cur.fetchone()
-                if result:
-                    description, name, amount = result
-                    context.add(f"{description}, Amount: {amount}, Category: {name}")
-
-                cur.execute('SELECT name, "limit" FROM "BudgetTable" WHERE id = %s', (db_id,))
-                result = cur.fetchone()
-                if result:
-                    name, limit = result
-                    context.add(f"Budget Category: {name}, Limit: {limit}")
-
-    finally:
-        cur.close()
-        conn.close()
-
-    context_text = "\n".join(context)
-    prompt = f"Given the following context, answer the question based solely on the provided information:\nContext: {context_text}\nQuestion: {query}\nAnswer:"
-
-    return query_llama3(prompt)
-
-# Build the index if needed
-if not os.path.exists("financial_data.index"):
-    build_faiss_index()
+# Don't auto-build the index at module import time
+# Instead, it will be built on-demand when first needed
