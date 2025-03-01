@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'  # Change to your Python version
+        python-version: '3.12'  # Match your Python version
 
     - name: Install dependencies
       run: |
@@ -25,28 +25,27 @@ jobs:
 
     - name: Create .env file
       run: |
+        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
         echo "DATABASE_NAME=${{ vars.DATABASE_NAME }}" >> .env
         echo "DATABASE_USER=${{ vars.DATABASE_USER }}" >> .env
         echo "DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}" >> .env
         echo "DATABASE_HOST=${{ vars.DATABASE_HOST }}" >> .env
         echo "DATABASE_PORT=${{ vars.DATABASE_PORT }}" >> .env
         echo "TOGETHER_API_KEY=${{ secrets.TOGETHER_API_KEY }}" >> .env
-        echo "DEBUG=${{ secrets.DEBUG }}" >> .env
+        echo "DEBUG=False" >> .env  # Set DEBUG to False for production
       shell: bash
 
-    - name: Run migrations
-      env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    - name: Apply database migrations
       run: |
-        cd Fin_ai  # Navigate to the correct directory
+        cd Fin_ai || exit 1  # Ensure directory exists
         python manage.py migrate
 
     - name: Collect static files
       run: |
-        cd Fin_ai  # Navigate to the correct directory
+        cd Fin_ai || exit 1
         python manage.py collectstatic --noinput
 
     - name: Start Gunicorn Server
       run: |
-        cd Fin_ai  # Navigate to the correct directory
-        gunicorn Fin_ai.wsgi:application --bind 0.0.0.0:8000
+        cd Fin_ai || exit 1
+        gunicorn Fin_ai.wsgi:application --bind 0.0.0.0:8000 --workers 3  # Use 3 workers for better performance
