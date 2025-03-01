@@ -26,7 +26,11 @@ SECRET_KEY = 'django-insecure-rn_p(c&(#&njkz53s2oczvz$g-i04o4^upyikk-p$gltuj#=&^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'financial-ai.onrender.com'
+]
 
 
 # Application definition
