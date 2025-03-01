@@ -28,9 +28,13 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'financial-ai.onrender.com'
+    'financial-ai.onrender.com',
+    "*"
+
 ]
 
+
+PORT = os.getenv('PORT', '8000')  # Use Render's PORT or default to 8000
 
 # Application definition
 
