@@ -22,5 +22,6 @@ urlpatterns = [
     path('transactions/add/', views.add_transaction, name='add_transaction'),
     path('transactions/delete/<int:transaction_id>/', views.delete_transaction, name='delete_transaction'),
     path('chatbot/', views.chatbot_query, name='chatbot_query'),
+    path('', RedirectView.as_view(url='Adviser/', permanent=False)),
 ]
 
