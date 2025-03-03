@@ -1,3 +1,5 @@
+import subprocess
+import traceback
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
@@ -162,12 +164,18 @@ def add_budget(request):
             budget = form.save(commit=False)
             budget.user = request.user
             budget.save()
-            messages.success(request, 'Budget added successfully!')
+
+            # Run the .rag file after saving the budget
+            try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+            except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
             return redirect('manage_budgets')
     else:
         form = BudgetForm()
     return render(request, 'add_budget.html', {'form': form})
-
 
 # 🟡 Edit Budget
 @login_required
