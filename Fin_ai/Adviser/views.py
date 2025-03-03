@@ -112,6 +112,12 @@ def add_expense(request):
             expense = form.save(commit=False)
             expense.user = request.user  # Assign the logged-in user to the expense
             expense.save()
+            try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+            except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
             return redirect('manage_expenses')  # Redirect to transactions page or another page
     else:
         form = ExpenseForm()
@@ -136,6 +142,12 @@ def edit_expense(request, expense_id):
         form = ExpenseForm(request.POST, instance=expense)
         if form.is_valid():
             form.save()
+            try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+            except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
             return redirect('manage_expenses')
     else:
         form = ExpenseForm(instance=expense)
@@ -146,6 +158,12 @@ def delete_expense(request, expense_id):
     expense = get_object_or_404(Expense, id=expense_id, user=request.user)
     if request.method == 'POST':
         expense.delete()
+        try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+        except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
         return redirect('manage_expenses')
 
 
@@ -186,6 +204,12 @@ def edit_budget(request, budget_id):
         if form.is_valid():
             form.save()
             messages.success(request, 'Budget updated successfully!')
+            try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+            except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
             return redirect('manage_budgets')
     else:
         form = BudgetForm(instance=budget)
@@ -199,6 +223,12 @@ def delete_budget(request, budget_id):
     if request.method == 'POST':
         budget.delete()
         messages.success(request, 'Budget deleted successfully!')
+        try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+        except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
         return redirect('manage_budgets')
     return render(request, 'confirm_delete.html', {'budget': budget})
 
@@ -208,6 +238,12 @@ def add_category(request):
         name = request.POST.get("name")
         if name:
             Category.objects.create(name=name)
+            try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+            except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
             return redirect("manage_budgets")
     return render(request, "add_category.html")
 
@@ -253,7 +289,12 @@ def add_transaction(request):
             description=description,
             name=name  # Ensure this is passed
         )
-
+        try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+        except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
         return redirect('transactions')  # Redirect to the transaction list page
 
     categories = Category.objects.all()
@@ -267,6 +308,12 @@ def edit_transaction(request, transaction_id):
         form = TransactionForm(request.POST, instance=transaction)
         if form.is_valid():
             form.save()
+            try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+            except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
             return redirect('transactions')  # Redirect to transaction list
     else:
         form = TransactionForm(instance=transaction)
@@ -278,5 +325,11 @@ def delete_transaction(request, transaction_id):
     transaction = get_object_or_404(Transaction, id=transaction_id, user=request.user)
     if request.method == 'POST':
         transaction.delete()
+        try:
+                subprocess.run(["python", "Adviser/rag.py"], check=True)
+                messages.success(request, 'Budget added successfully and .rag file executed!')
+        except subprocess.CalledProcessError as e:
+                messages.error(request, f'Budget added, but there was an error running the script: {e}')
+            
         return redirect('transactions')
     return render(request, 'delete_transaction.html', {'transaction': transaction})

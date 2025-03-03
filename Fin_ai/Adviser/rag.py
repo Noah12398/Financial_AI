@@ -92,10 +92,10 @@ def build_faiss_index():
         embeddings = np.array([model.encode(desc) for desc in descriptions], dtype=np.float32)
 
         # Print debug info
-        print("\nGenerated Embeddings:")
+        # print("\nGenerated Embeddings:")
         for text, embedding in zip(descriptions, embeddings):
-            print(f"Text: {text}")
-            print(f"Embedding: {embedding[:5]} ... (truncated)\n")
+            # print(f"Text: {text}")
+            # print(f"Embedding: {embedding[:5]} ... (truncated)\n")
             sys.stdout.flush()
 
         # Build and save FAISS index
@@ -128,9 +128,14 @@ def query_llama3(prompt):
 
 # Generate RAG response
 def get_rag_response(query):
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    # Construct full paths to files
+    index_path = os.path.join(BASE_DIR, "financial_data.index")
+    index_map_path = os.path.join(BASE_DIR, "index_mapping.json")
     try:
         
-        index = faiss.read_index("financial_data.index")
+        index = faiss.read_index(index_path)
     except Exception as e:
         return f"Error loading FAISS index: {str(e)}"
 
@@ -140,7 +145,7 @@ def get_rag_response(query):
     context = set()
 
     try:
-        with open("index_mapping.json", "r") as f:
+        with open(index_map_path, "r") as f:
             index_map = json.load(f)
         index_map = {int(k): v for k, v in index_map.items()}
     except Exception as e:
@@ -156,7 +161,7 @@ def get_rag_response(query):
         for idx in indices[0]:
             db_id = index_map.get(idx)  # Correct
 
-            print(db_id)
+            # print(db_id)
             total_transactions_amounts=0
             total_expenses_amounts=0
             if db_id is not None:
@@ -189,7 +194,7 @@ def get_rag_response(query):
     finally:
         cur.close()
         conn.close()
-    print(context)
+    # print(context)
     context_text = "\n".join(context)
     prompt = f"""
     You are a financial AI assistant. Based on the given financial data, analyze and respond accordingly.
@@ -206,5 +211,4 @@ def get_rag_response(query):
     return query_llama3(prompt)
 
 # Build the index if needed
-if not os.path.exists("financial_data.index"):
-    build_faiss_index()
+build_faiss_index()
