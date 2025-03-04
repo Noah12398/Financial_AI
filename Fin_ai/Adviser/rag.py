@@ -92,10 +92,10 @@ def build_faiss_index():
         embeddings = np.array([model.encode(desc) for desc in descriptions], dtype=np.float32)
 
         # Print debug info
-        # print("\nGenerated Embeddings:")
+        print("\nGenerated Embeddings:")
         for text, embedding in zip(descriptions, embeddings):
-            # print(f"Text: {text}")
-            # print(f"Embedding: {embedding[:5]} ... (truncated)\n")
+            print(f"Text: {text}")
+            print(f"Embedding: {embedding[:5]} ... (truncated)\n")
             sys.stdout.flush()
 
         # Build and save FAISS index
@@ -131,8 +131,9 @@ def get_rag_response(query):
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     # Construct full paths to files
-    index_path = os.path.join(BASE_DIR, "financial_data.index")
-    index_map_path = os.path.join(BASE_DIR, "index_mapping.json")
+    index_path = os.path.abspath("financial_data.index")
+    print(f"Loading FAISS index from: {index_path}")
+    index_map_path = os.path.abspath( "index_mapping.json")
     try:
         
         index = faiss.read_index(index_path)
@@ -140,7 +141,7 @@ def get_rag_response(query):
         return f"Error loading FAISS index: {str(e)}"
 
     query_embedding = model.encode(query).reshape(1, -1).astype(np.float32)
-    distances, indices = index.search(query_embedding, k=15)
+    distances, indices = index.search(query_embedding, k=50)
 
     context = set()
 
@@ -166,13 +167,13 @@ def get_rag_response(query):
             total_expenses_amounts=0
             if db_id is not None:
                 # Fetch Transactions
-                cur.execute('SELECT description, amount FROM "Adviser_transaction"  WHERE category_id = (SELECT id FROM "Adviser_category" WHERE name = %s)', (db_id,))
+                cur.execute('SELECT description,name, amount FROM "Adviser_transaction"  WHERE category_id = (SELECT id FROM "Adviser_category" WHERE name = %s)', (db_id,))
                 result = cur.fetchone()
                 if result:
-                    description, amount = result
+                    description,name, amount = result
                     total_transactions_amounts=amount
-                    context.add(f"Transaction: {description}, Amount: {amount}")
-
+                    context.add(f"Transaction: {description}, Amount: {amount},Category:{name}")
+                    print(f"Transaction: {description}, Amount: {amount},Category:{name}")
                 # Fetch Expenses
                 cur.execute('SELECT name, amount FROM "Adviser_expense" WHERE category_id = (SELECT id FROM "Adviser_category" WHERE name = %s)', (db_id,))
                 result = cur.fetchone()
@@ -180,14 +181,17 @@ def get_rag_response(query):
                     name, amount = result
                     total_expenses_amounts=amount
                     context.add(f"Expense: {name}, Amount: {amount}")
-
+                    print(f"Expense: {name}, Amount: {amount}")
                 # Fetch Budgets
                 cur.execute('SELECT name, "limit" FROM "BudgetTable"  WHERE category_id = (SELECT id FROM "Adviser_category" WHERE name = %s)', (db_id,))
                 result = cur.fetchone()
                 if result:
                     name, limit = result
                     context.add(f"Budget Category: {name}, Limit: {limit}")
-                context.add(f"Total Amount: {total_transactions_amounts + total_expenses_amounts}")
+                    print(f"Budget Category: {name}, Limit: {limit}")
+                total_amount = total_transactions_amounts + total_expenses_amounts
+                context.add(f"Total Amount: {total_amount}")
+                print(f"Total Amount: {total_amount}")
     except Exception as e:
         return f"Error retrieving data: {str(e)}"
 
