@@ -16,23 +16,26 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'  # Change to your version
+        python-version: '3.12'  # Ensure this matches your local version
 
     - name: Install dependencies
       run: |
-        pip install --upgrade pip
-        pip install -r requirements.txt
+        python -m pip install --upgrade pip
+        pip install --no-cache-dir -r requirements.txt  # Avoid cache to reduce memory
 
-    - name: Run migrations
+    - name: Run database migrations (if needed)
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}  # Add this in GitHub Secrets
       run: |
-        python manage.py migrate
+        python manage.py makemigrations --check || python manage.py migrate  # Only run if changes exist
 
     - name: Collect static files
       run: |
-        python manage.py collectstatic --noinput
+        python manage.py collectstatic --noinput --clear  # Remove old files before collecting
 
     - name: Start Gunicorn Server
       run: |
-        gunicorn Fin_ai.wsgi:application --bind 0.0.0.0:8000
+        gunicorn Fin_ai.wsgi:application \
+          --bind 0.0.0.0:8000 \
+          --workers=$(nproc) \  # Dynamically set workers
+          --preload  # Reduce memory footprint
