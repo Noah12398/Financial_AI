@@ -19,6 +19,9 @@ client = Together(api_key=API_KEY)
 # Initialize Sentence Transformer model
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
+INDEX_PATH = "financial_data.index"
+INDEX_MAP_PATH = "index_mapping.json"
+
 # Connect to PostgreSQL
 def get_db_connection():
     return psycopg2.connect(
@@ -33,7 +36,33 @@ def get_db_connection():
         keepalives_count=5
     )
 
+# Lazy-load FAISS index
+faiss_index = None
+index_map = None
+
+def load_faiss_index():
+    global faiss_index, index_map
+    if faiss_index is None or index_map is None:
+        try:
+            print(f"Loading FAISS index from: {INDEX_PATH}")
+            faiss_index = faiss.read_index(INDEX_PATH)
+            
+            with open(INDEX_MAP_PATH, "r") as f:
+                index_map = json.load(f)
+            index_map = {int(k): v for k, v in index_map.items()}
+        except Exception as e:
+            print(f"Error loading FAISS index: {str(e)}")
+            faiss_index = None
+            index_map = None
+
 def build_faiss_index():
+    """Builds the FAISS index only if it does not exist."""
+    if os.path.exists(INDEX_PATH) and os.path.exists(INDEX_MAP_PATH):
+        print("FAISS index already exists. Skipping rebuild.")
+        return
+    
+    print("Building FAISS index...")
+
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -91,22 +120,17 @@ def build_faiss_index():
         descriptions = [str(item[1]) for item in all_data]
         embeddings = np.array([model.encode(desc) for desc in descriptions], dtype=np.float32)
 
-        # Print debug info
-        print("\nGenerated Embeddings:")
-        for text, embedding in zip(descriptions, embeddings):
-            print(f"Text: {text}")
-            print(f"Embedding: {embedding[:5]} ... (truncated)\n")
-            sys.stdout.flush()
-
         # Build and save FAISS index
         index = faiss.IndexFlatL2(embeddings.shape[1])
         index.add(embeddings)
-        faiss.write_index(index, "financial_data.index")
+        faiss.write_index(index, INDEX_PATH)
 
         # Save index-to-ID mapping in JSON format
         index_mapping = {idx: id_ for idx, (id_, _) in enumerate(all_data)}
-        with open("index_mapping.json", "w") as f:
+        with open(INDEX_MAP_PATH, "w") as f:
             json.dump(index_mapping, f)
+
+        print("FAISS index built successfully.")
 
     finally:
         cur.close()
@@ -128,91 +152,50 @@ def query_llama3(prompt):
 
 # Generate RAG response
 def get_rag_response(query):
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    global faiss_index, index_map
+    
+    # Ensure FAISS index is built and loaded
+    if not os.path.exists(INDEX_PATH) or not os.path.exists(INDEX_MAP_PATH):
+        build_faiss_index()
 
-    # Construct full paths to files
-    index_path = os.path.abspath("financial_data.index")
-    print(f"Loading FAISS index from: {index_path}")
-    index_map_path = os.path.abspath( "index_mapping.json")
-    try:
-        
-        index = faiss.read_index(index_path)
-    except Exception as e:
-        return f"Error loading FAISS index: {str(e)}"
+    load_faiss_index()
+    
+    if faiss_index is None or index_map is None:
+        return "Error: FAISS index not available."
 
     query_embedding = model.encode(query).reshape(1, -1).astype(np.float32)
-    distances, indices = index.search(query_embedding, k=50)
+    distances, indices = faiss_index.search(query_embedding, k=50)
 
     context = set()
-
-    try:
-        with open(index_map_path, "r") as f:
-            index_map = json.load(f)
-        index_map = {int(k): v for k, v in index_map.items()}
-    except Exception as e:
-        return f"Error loading index mapping: {str(e)}"
-    # print("ASSDDFF")
-    # print("FAISS Retrieved IDs:", indices[0])
-    # print("Mapped DB IDs:", [index_map.get(idx) for idx in indices[0]]) 
-
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
         for idx in indices[0]:
-            db_id = index_map.get(idx)  # Correct
-
-            # print(db_id)
-            total_transactions_amounts=0
-            total_expenses_amounts=0
-            if db_id is not None:
-                # Fetch Transactions
-                cur.execute('SELECT description,name, amount FROM "Adviser_transaction"  WHERE category_id = (SELECT id FROM "Adviser_category" WHERE name = %s)', (db_id,))
+            db_id = index_map.get(idx)
+            if db_id:
+                cur.execute('SELECT description, name, amount FROM "Adviser_transaction" WHERE category_id = (SELECT id FROM "Adviser_category" WHERE name = %s)', (db_id,))
                 result = cur.fetchone()
                 if result:
-                    description,name, amount = result
-                    total_transactions_amounts=amount
-                    context.add(f"Transaction: {description}, Amount: {amount},Category:{name}")
-                    print(f"Transaction: {description}, Amount: {amount},Category:{name}")
-                # Fetch Expenses
+                    description, name, amount = result
+                    context.add(f"Transaction: {description}, Amount: {amount}, Category: {name}")
+
                 cur.execute('SELECT name, amount FROM "Adviser_expense" WHERE category_id = (SELECT id FROM "Adviser_category" WHERE name = %s)', (db_id,))
                 result = cur.fetchone()
                 if result:
                     name, amount = result
-                    total_expenses_amounts=amount
                     context.add(f"Expense: {name}, Amount: {amount}")
-                    print(f"Expense: {name}, Amount: {amount}")
-                # Fetch Budgets
-                cur.execute('SELECT name, "limit" FROM "BudgetTable"  WHERE category_id = (SELECT id FROM "Adviser_category" WHERE name = %s)', (db_id,))
+
+                cur.execute('SELECT name, "limit" FROM "BudgetTable" WHERE category_id = (SELECT id FROM "Adviser_category" WHERE name = %s)', (db_id,))
                 result = cur.fetchone()
                 if result:
                     name, limit = result
-                    context.add(f"Budget Category: {name}, Limit: {limit}")
-                    print(f"Budget Category: {name}, Limit: {limit}")
-                total_amount = total_transactions_amounts + total_expenses_amounts
-                context.add(f"Total Amount: {total_amount}")
-                print(f"Total Amount: {total_amount}")
-    except Exception as e:
-        return f"Error retrieving data: {str(e)}"
+                    context.add(f"Budget: {name}, Limit: {limit}")
 
     finally:
         cur.close()
         conn.close()
-    # print(context)
-    context_text = "\n".join(context)
-    prompt = f"""
-    You are a financial AI assistant. Based on the given financial data, analyze and respond accordingly.
-
-    Context:
-    {context_text}
-
-    Question:
-    {query}
-
-    Answer:
-    """
+    formatted_context = '\n'.join(context)  # Process separately
+    prompt = f"Context:\n{formatted_context}\n\nQuestion:\n{query}\n\nAnswer:"
 
     return query_llama3(prompt)
-
-# Build the index if needed
-build_faiss_index()
