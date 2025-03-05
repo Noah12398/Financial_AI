@@ -164,7 +164,7 @@ def get_rag_response(query):
         return "Error: FAISS index not available."
 
     query_embedding = model.encode(query).reshape(1, -1).astype(np.float32)
-    distances, indices = faiss_index.search(query_embedding, k=50)
+    distances, indices = faiss_index.search(query_embedding, k=15)
 
     context = set()
     conn = get_db_connection()
