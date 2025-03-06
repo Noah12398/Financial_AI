@@ -2,7 +2,6 @@ import os
 import psycopg2
 import json
 from together import Together
-from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 from collections import defaultdict
 
@@ -13,8 +12,6 @@ load_dotenv()
 API_KEY = os.getenv("TOGETHER_API_KEY")
 client = Together(api_key=API_KEY)
 
-# Initialize Sentence Transformer model
-model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Connect to PostgreSQL
 def get_db_connection():
