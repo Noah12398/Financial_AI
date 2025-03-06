@@ -206,7 +206,7 @@ def build_vector_index(batch_size=10):
                 chunk_text = f"Category:{category_name};Budget:{budget_text};Transactions:{transactions_text};Expenses:{expenses_text}"
                 
                 # Encode text to vector
-                embedding = model.encode(chunk_text).astype(np.float32)
+                embedding = model.encode(chunk_text).astype(np.float16)
                 
                 # Add to batch
                 batch_vectors.append(embedding)
