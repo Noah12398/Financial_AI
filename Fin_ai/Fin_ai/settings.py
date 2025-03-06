@@ -29,8 +29,12 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'financial-ai.onrender.com',
+    'financialai-production.up.railway.app',
     "*"
 
+]
+CSRF_TRUSTED_ORIGINS = [
+    "https://financialai-production.up.railway.app/",
 ]
 
 
