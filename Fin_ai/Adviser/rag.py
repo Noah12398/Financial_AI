@@ -61,75 +61,94 @@ def load_faiss_index():
             index_map = None
 
 
-def build_faiss_index():
-    """Builds the FAISS index only if it does not exist."""
+def build_faiss_index(batch_size=100):
+    """Builds the FAISS index with batched processing to reduce memory usage."""
     if os.path.exists(INDEX_PATH) and os.path.exists(INDEX_MAP_PATH):
         print("FAISS index already exists. Skipping rebuild.")
         return
 
     print("Building FAISS index...")
-
     conn = get_db_connection()
     cur = conn.cursor()
-
+    
     try:
         # Fetch category data
         cur.execute('SELECT id, name FROM "Adviser_category"')
-        category_dict = {id_: name for id_, name in cur.fetchall()}  # {category_id: category_name}
-
-        # Dictionary to store categorized data
-        category_data_dict = defaultdict(lambda: {"transactions": [], "expenses": [], "budget": "No budget set"})
-
-        # Fetch budget data
-        cur.execute('SELECT category_id, "limit" FROM "BudgetTable"')
-        for category_id, limit in cur.fetchall():
-            category_name = category_dict.get(category_id, "Uncategorized")
-            category_data_dict[category_name]["budget"] = f"Budget Limit: {limit}"
-
-        # Fetch transactions & expenses efficiently
-        cur.execute('SELECT category_id, description, amount FROM "Adviser_transaction"')
-        for category_id, description, amount in cur.fetchall():
-            category_name = category_dict.get(category_id, "Uncategorized")
-            category_data_dict[category_name]["transactions"].append(f"Transaction: {description}, Amount: {amount}")
-
-        cur.execute('SELECT category_id, name, amount FROM "Adviser_expense"')
-        for category_id, name, amount in cur.fetchall():
-            category_name = category_dict.get(category_id, "Uncategorized")
-            category_data_dict[category_name]["expenses"].append(f"Expense: {name}, Amount: {amount}")
-
-        # Prepare data for FAISS index
-        all_data = []
-        for category, details in category_data_dict.items():
-            transactions_text = " | ".join(details["transactions"]) if details["transactions"] else "No transactions"
-            expenses_text = " | ".join(details["expenses"]) if details["expenses"] else "No expenses"
-            budget_text = details["budget"]
-
-            final_text = f"Category: {category}, {budget_text}, Transactions: {transactions_text}, Expenses: {expenses_text}"
-            all_data.append((category, final_text))
-
-        # Ensure there's data
-        if not all_data:
-            raise ValueError("No data found in the database to build the index.")
-
-        # Create embeddings lazily to reduce memory usage
-        embeddings = np.array([model.encode(str(text[1])) for text in all_data], dtype=np.float32)
-
-        # Build and save FAISS index
-        index = faiss.IndexFlatL2(embeddings.shape[1])
-        index.add(embeddings)
+        category_dict = {id_: name for id_, name in cur.fetchall()}
+        
+        # Create index first, before adding data
+        # Get dimension from model
+        dimension = model.get_sentence_embedding_dimension()
+        index = faiss.IndexFlatL2(dimension)
+        
+        # Initialize mapping dictionary
+        index_mapping = {}
+        current_idx = 0
+        
+        # Process each category separately to reduce memory usage
+        for category_id, category_name in category_dict.items():
+            # Create category context
+            category_data = {"transactions": [], "expenses": [], "budget": "No budget set"}
+            
+            # Fetch budget
+            cur.execute('SELECT "limit" FROM "BudgetTable" WHERE category_id = %s', (category_id,))
+            budget = cur.fetchone()
+            if budget:
+                category_data["budget"] = f"Budget Limit: {budget[0]}"
+            
+            # Fetch transactions in batches
+            cur.execute('SELECT description, amount FROM "Adviser_transaction" WHERE category_id = %s', (category_id,))
+            while True:
+                transactions = cur.fetchmany(batch_size)
+                if not transactions:
+                    break
+                for desc, amount in transactions:
+                    category_data["transactions"].append(f"Transaction: {desc}, Amount: {amount}")
+            
+            # Fetch expenses in batches
+            cur.execute('SELECT name, amount FROM "Adviser_expense" WHERE category_id = %s', (category_id,))
+            while True:
+                expenses = cur.fetchmany(batch_size)
+                if not expenses:
+                    break
+                for name, amount in expenses:
+                    category_data["expenses"].append(f"Expense: {name}, Amount: {amount}")
+            
+            # Create text chunks if there's too much data
+            transactions_text = " | ".join(category_data["transactions"]) if category_data["transactions"] else "No transactions"
+            expenses_text = " | ".join(category_data["expenses"]) if category_data["expenses"] else "No expenses"
+            budget_text = category_data["budget"]
+            
+            # Process in smaller chunks if needed
+            if len(category_data["transactions"]) > 20:
+                # Process transactions in smaller groups to create multiple entries
+                for i in range(0, len(category_data["transactions"]), 20):
+                    chunk = category_data["transactions"][i:i+20]
+                    chunk_text = f"Category: {category_name}, {budget_text}, Transactions: {' | '.join(chunk)}, Expenses: {expenses_text}"
+                    
+                    # Add to index
+                    embedding = model.encode(chunk_text).reshape(1, -1).astype(np.float32)
+                    index.add(embedding)
+                    index_mapping[current_idx] = category_name
+                    current_idx += 1
+            else:
+                # Create one entry for this category
+                final_text = f"Category: {category_name}, {budget_text}, Transactions: {transactions_text}, Expenses: {expenses_text}"
+                embedding = model.encode(final_text).reshape(1, -1).astype(np.float32)
+                index.add(embedding)
+                index_mapping[current_idx] = category_name
+                current_idx += 1
+        
+        # Save index and mapping
         faiss.write_index(index, INDEX_PATH)
-
-        # Save index-to-ID mapping
-        index_mapping = {idx: id_ for idx, (id_, _) in enumerate(all_data)}
         with open(INDEX_MAP_PATH, "w") as f:
             json.dump(index_mapping, f)
-
+            
         print("FAISS index built successfully.")
-
+    
     finally:
         cur.close()
         conn.close()
-
 
 def query_llama3(prompt):
     """Queries Meta-LLaMA 3.1 via Together AI."""
