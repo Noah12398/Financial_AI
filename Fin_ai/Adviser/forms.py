@@ -3,14 +3,25 @@ from django.contrib.auth.models import User
 
 from Adviser.models import Budget, Category, Expense, Transaction
 
+from django import forms
+from django.contrib.auth.models import User
+
 class UserRegistrationForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput)
-    password_confirm = forms.CharField(widget=forms.PasswordInput)
-    
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Enter password'})
+    )
+    password_confirm = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Confirm password'})
+    )
+
     class Meta:
         model = User
         fields = ['username', 'email']
-    
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter username'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Enter email'}),
+        }
+
     def clean_password_confirm(self):
         password = self.cleaned_data.get('password')
         password_confirm = self.cleaned_data.get('password_confirm')
@@ -18,6 +29,7 @@ class UserRegistrationForm(forms.ModelForm):
         if password != password_confirm:
             raise forms.ValidationError("Passwords do not match")
         return password_confirm
+
 # Adviser/forms.py
 class ExpenseForm(forms.ModelForm):
     class Meta:
