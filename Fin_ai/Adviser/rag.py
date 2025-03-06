@@ -46,6 +46,7 @@ def get_sentence_model():
     if sentence_model is None:
         # Use a smaller model if available for memory efficiency
         sentence_model = SentenceTransformer('paraphrase-MiniLM-L3-v2')
+        
     return sentence_model
 
 def get_connection_pool():
@@ -77,14 +78,13 @@ def release_db_connection(conn):
         get_connection_pool().putconn(conn)
 
 def load_vector_index():
-    """Loads the NumPy-based vector index and mapping if not already loaded."""
     global vector_index, index_map
-
+    
     if vector_index is None or index_map is None:
         try:
             if os.path.exists(VECTORS_PATH) and os.path.exists(INDEX_MAP_PATH):
-                npz_data = np.load(VECTORS_PATH)
-                vector_index = npz_data['vectors']
+                # Use memory mapping instead of loading everything
+                vector_index = np.load(VECTORS_PATH, mmap_mode='r')['vectors']
                 with open(INDEX_MAP_PATH, "r") as f:
                     index_map = json.load(f)
                 index_map = {int(k): v for k, v in index_map.items()}
@@ -114,18 +114,21 @@ def cosine_similarity(query_vector, vectors):
     
     return similarities
 
-def vector_search(query_vector, vectors, k=3):
-    """Perform vector search using NumPy and return top k indices"""
-    # Calculate similarities
-    similarities = cosine_similarity(query_vector, vectors)
+def vector_search(query_vector, vectors, k=3, chunk_size=1000):
+    """Perform vector search using chunked processing to reduce memory usage"""
+    total_vectors = len(vectors)
+    all_similarities = np.zeros(total_vectors)
     
+    # Process in chunks
+    for i in range(0, total_vectors, chunk_size):
+        end_idx = min(i + chunk_size, total_vectors)
+        chunk = vectors[i:end_idx]
+        all_similarities[i:end_idx] = cosine_similarity(query_vector, chunk)
+        
     # Get top k indices
-    if len(similarities) <= k:
-        return np.argsort(similarities)[::-1]
-    else:
-        return np.argsort(similarities)[::-1][:k]
+    return np.argsort(all_similarities)[::-1][:k]
 
-def build_vector_index(batch_size=20):
+def build_vector_index(batch_size=10):
     """Builds the vector index with improved memory efficiency using NumPy."""
     log_memory_usage("start_build_index")
     print("Building vector index...")
