@@ -16,8 +16,7 @@ API_KEY = os.getenv("TOGETHER_API_KEY")
 client = Together(api_key=API_KEY)
 
 # Initialize Sentence Transformer model
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
+model = SentenceTransformer('paraphrase-MiniLM-L3-v2')
 # File paths for FAISS index
 INDEX_PATH = "financial_data.index"
 INDEX_MAP_PATH = "index_mapping.json"
