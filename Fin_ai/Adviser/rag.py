@@ -2,7 +2,6 @@ import os
 import json
 import psycopg2
 import numpy as np
-import faiss
 import gc
 from dotenv import load_dotenv
 from together import Together
@@ -12,14 +11,14 @@ from psycopg2.pool import ThreadedConnectionPool
 # Load environment variables
 load_dotenv()
 
-# File paths for FAISS index
-INDEX_PATH = "financial_data.index"
+# File paths for NumPy-based vector storage
+VECTORS_PATH = "financial_vectors.npz"
 INDEX_MAP_PATH = "index_mapping.json"
 
 # Initialize necessary components only when needed
 together_client = None
 sentence_model = None
-faiss_index = None
+vector_index = None  # Will store the NumPy array of vectors
 index_map = None
 connection_pool = None
 
@@ -77,95 +76,90 @@ def release_db_connection(conn):
     if conn and connection_pool:
         get_connection_pool().putconn(conn)
 
-def load_faiss_index():
-    """Loads the FAISS index and mapping if not already loaded."""
-    global faiss_index, index_map
+def load_vector_index():
+    """Loads the NumPy-based vector index and mapping if not already loaded."""
+    global vector_index, index_map
 
-    if faiss_index is None or index_map is None:
+    if vector_index is None or index_map is None:
         try:
-            if os.path.exists(INDEX_PATH) and os.path.exists(INDEX_MAP_PATH):
-                faiss_index = faiss.read_index(INDEX_PATH)
+            if os.path.exists(VECTORS_PATH) and os.path.exists(INDEX_MAP_PATH):
+                npz_data = np.load(VECTORS_PATH)
+                vector_index = npz_data['vectors']
                 with open(INDEX_MAP_PATH, "r") as f:
                     index_map = json.load(f)
                 index_map = {int(k): v for k, v in index_map.items()}
-                print("FAISS index loaded successfully")
+                print(f"NumPy vector index loaded successfully - {len(vector_index)} vectors")
             else:
-                print("FAISS index files not found. You may need to rebuild the index.")
+                print("Vector index files not found. You may need to rebuild the index.")
         except Exception as e:
-            print(f"Error loading FAISS index: {str(e)}")
-            faiss_index = None
+            print(f"Error loading vector index: {str(e)}")
+            vector_index = None
             index_map = None
 
-def build_faiss_index(batch_size=20):  # Smaller batch size for better memory management
-    """Builds the FAISS index with improved memory efficiency."""
-    log_memory_usage("start_build_index")
-    print("Building FAISS index...")
+def cosine_similarity(query_vector, vectors):
+    """Calculate cosine similarity between query vector and a matrix of vectors"""
+    # Normalize vectors for cosine similarity
+    query_norm = np.linalg.norm(query_vector)
+    if query_norm == 0:
+        return np.zeros(len(vectors))
     
-    # Use IVFFlat index which is more memory efficient for larger datasets
-    # Get model dimension once
+    query_normalized = query_vector / query_norm
+    
+    # Calculate dot product, handling empty vectors
+    similarities = np.zeros(len(vectors))
+    for i, vec in enumerate(vectors):
+        vec_norm = np.linalg.norm(vec)
+        if vec_norm > 0:
+            similarities[i] = np.dot(query_normalized, vec / vec_norm)
+    
+    return similarities
+
+def vector_search(query_vector, vectors, k=3):
+    """Perform vector search using NumPy and return top k indices"""
+    # Calculate similarities
+    similarities = cosine_similarity(query_vector, vectors)
+    
+    # Get top k indices
+    if len(similarities) <= k:
+        return np.argsort(similarities)[::-1]
+    else:
+        return np.argsort(similarities)[::-1][:k]
+
+def build_vector_index(batch_size=20):
+    """Builds the vector index with improved memory efficiency using NumPy."""
+    log_memory_usage("start_build_index")
+    print("Building vector index...")
+    
+    # Get model dimension
     model = get_sentence_model()
     dimension = model.get_sentence_embedding_dimension()
     
-    # Create a more memory-efficient index type
-    # IVFFlat with fewer centroids is more memory efficient
-    nlist = 10  # fewer clusters for small dataset
-    quantizer = faiss.IndexFlatL2(dimension)
-    index = faiss.IndexIVFFlat(quantizer, dimension, nlist)
-    
-    # Initialize with some data before adding vectors
+    # Vectors will be stored in this list initially
+    all_vectors = []
     index_mapping = {}
     current_idx = 0
     
     conn = get_db_connection()
     
     try:
-        # Create a faiss batch matrix that we'll reuse to avoid allocation/deallocation cycles
-        max_batch_vectors = batch_size
-        batch_embeddings = np.zeros((max_batch_vectors, dimension), dtype=np.float32)
-        batch_count = 0
-        batch_indices = []  # Store corresponding category names
-        
-        # First get category count to determine training samples
+        # Use a connection to get the total count for pre-allocation
         with conn.cursor() as count_cur:
             count_cur.execute('SELECT COUNT(*) FROM "Adviser_category"')
-            category_count = count_cur.fetchone()[0]
+            total_categories = count_cur.fetchone()[0]
+            print(f"Total categories to process: {total_categories}")
         
-        # Create a separate cursor for the main query
-        with conn.cursor(name='fetch_categories') as category_cur:  # Named cursor for server-side cursor
-            # Use server-side cursor to avoid fetching all records at once
+        # Pre-allocate vectors if we know the size (better memory management)
+        # Will use a list first, then convert to numpy array at the end
+        
+        # Process in batches
+        batch_vectors = []
+        batch_indices = []
+        
+        # Process each category separately with a server-side cursor
+        with conn.cursor(name='fetch_categories') as category_cur:
             category_cur.execute('SELECT id, name FROM "Adviser_category"')
             
-            # We need some vectors to train the IVF index
-            train_vectors = []
-            
-            # Process first few categories to get training vectors
-            train_limit = min(100, category_count)
-            for i in range(train_limit):
-                category_data = category_cur.fetchone()
-                if not category_data:
-                    break
-                
-                category_id, category_name = category_data
-                
-                # Create a simplified representation for training
-                train_text = f"Category: {category_name}"
-                train_embedding = model.encode(train_text).reshape(1, -1).astype(np.float32)
-                train_vectors.append(train_embedding)
-            
-            # Combine training vectors and train the index
-            if train_vectors:
-                train_data = np.vstack(train_vectors)
-                index.train(train_data)
-                
-                # Free training data memory
-                del train_vectors
-                del train_data
-                gc.collect()
-            
-            # Reset cursor to start and process categories one by one
-            category_cur.execute('SELECT id, name FROM "Adviser_category"')
-            
-            # Process each category separately 
+            # Process each category separately
             while True:
                 category_data = category_cur.fetchone()
                 if not category_data:
@@ -173,17 +167,15 @@ def build_faiss_index(batch_size=20):  # Smaller batch size for better memory ma
                     
                 category_id, category_name = category_data
                 
-                # Clear per-category variables to free memory
+                # Get budget info with dedicated cursor
                 budget_text = "No budget set"
-                
-                # Get budget info with its own connection to avoid memory leaks
                 with conn.cursor() as budget_cur:
                     budget_cur.execute('SELECT "limit" FROM "BudgetTable" WHERE category_id = %s', (category_id,))
                     budget = budget_cur.fetchone()
                     if budget:
                         budget_text = f"Budget Limit: {budget[0]}"
                 
-                # Process transactions in smaller batches
+                # Get transactions with dedicated cursor - limit to 10
                 transactions_text = ""
                 with conn.cursor(name=f'fetch_trans_{category_id}') as trans_cur:
                     trans_cur.execute('SELECT description, amount FROM "Adviser_transaction" WHERE category_id = %s LIMIT 10', (category_id,))
@@ -195,7 +187,7 @@ def build_faiss_index(batch_size=20):  # Smaller batch size for better memory ma
                     else:
                         transactions_text = "No transactions"
                 
-                # Get expenses with its own cursor
+                # Get expenses with dedicated cursor
                 expenses_text = ""
                 with conn.cursor(name=f'fetch_exp_{category_id}') as exp_cur:
                     exp_cur.execute('SELECT name, amount FROM "Adviser_expense" WHERE category_id = %s LIMIT 10', (category_id,))
@@ -207,48 +199,55 @@ def build_faiss_index(batch_size=20):  # Smaller batch size for better memory ma
                     else:
                         expenses_text = "No expenses"
                 
-                # Create category representation with minimal text
+                # Create minimal text representation
                 chunk_text = f"Category:{category_name};Budget:{budget_text};Transactions:{transactions_text};Expenses:{expenses_text}"
                 
-                # Add to batch
+                # Encode text to vector
                 embedding = model.encode(chunk_text).astype(np.float32)
-                batch_embeddings[batch_count] = embedding
-                batch_indices.append(category_name)
-                batch_count += 1
                 
-                # Add completed batch to index
-                if batch_count >= max_batch_vectors:
-                    active_batch = batch_embeddings[:batch_count]
-                    index.add(active_batch)
+                # Add to batch
+                batch_vectors.append(embedding)
+                batch_indices.append(category_name)
+                
+                # Process batch
+                if len(batch_vectors) >= batch_size:
+                    # Add vectors to main collection
+                    all_vectors.extend(batch_vectors)
                     
                     # Update mapping
                     for i, name in enumerate(batch_indices):
                         index_mapping[current_idx + i] = name
                     
-                    current_idx += batch_count
-                    batch_count = 0
+                    current_idx += len(batch_vectors)
+                    batch_vectors = []
                     batch_indices = []
-                
-                # Force garbage collection periodically
-                if current_idx % 100 == 0:
-                    gc.collect()
-                    log_memory_usage(f"processed_{current_idx}_categories")
+                    
+                    # Memory cleanup for large datasets
+                    if current_idx % 100 == 0:
+                        gc.collect()
+                        log_memory_usage(f"processed_{current_idx}_categories")
         
         # Add any remaining batch items
-        if batch_count > 0:
-            active_batch = batch_embeddings[:batch_count]
-            index.add(active_batch)
-            
-            # Update mapping
+        if batch_vectors:
+            all_vectors.extend(batch_vectors)
             for i, name in enumerate(batch_indices):
                 index_mapping[current_idx + i] = name
         
-        # Save index and mapping
-        faiss.write_index(index, INDEX_PATH)
+        # Convert list of vectors to numpy array
+        vector_array = np.array(all_vectors, dtype=np.float32)
+        print(f"Created vector array with shape: {vector_array.shape}")
+        
+        # Save vector array and mapping
+        np.savez_compressed(VECTORS_PATH, vectors=vector_array)
         with open(INDEX_MAP_PATH, "w") as f:
             json.dump(index_mapping, f)
             
-        print("FAISS index built successfully with improved memory efficiency.")
+        print("Vector index built successfully.")
+        
+        # Cleanup
+        del all_vectors
+        del vector_array
+        gc.collect()
     
     except Exception as e:
         print(f"Error building index: {str(e)}")
@@ -259,7 +258,7 @@ def build_faiss_index(batch_size=20):  # Smaller batch size for better memory ma
         # Force garbage collection
         gc.collect()
         log_memory_usage("end_build_index")
-        
+
 def query_llama3(prompt):
     """Queries Meta-LLaMA 3.1 via Together AI."""
     try:
@@ -276,22 +275,24 @@ def query_llama3(prompt):
         return f"Error in LLaMA API: {str(e)}"
 
 def get_rag_response(query, max_context_items=100):
-    """Retrieves relevant financial information using FAISS and queries LLaMA for an answer."""
+    """Retrieves relevant financial information using NumPy-based vector search and queries LLaMA for an answer."""
     log_memory_usage("start_rag_response")
     
-    # Ensure FAISS index is available
-    if not os.path.exists(INDEX_PATH) or not os.path.exists(INDEX_MAP_PATH):
-        build_faiss_index()
+    # Ensure vector index is available
+    if not os.path.exists(VECTORS_PATH) or not os.path.exists(INDEX_MAP_PATH):
+        build_vector_index()
 
-    load_faiss_index()
+    load_vector_index()
 
-    if faiss_index is None or index_map is None:
-        return "Error: FAISS index not available."
+    if vector_index is None or index_map is None:
+        return "Error: Vector index not available."
 
-    # Encode query & search FAISS - use smaller k value
+    # Encode query & search vectors
     model = get_sentence_model()
-    query_embedding = model.encode(query).reshape(1, -1).astype(np.float32)
-    distances, indices = faiss_index.search(query_embedding, k=3)  # Reduced from 5 to 3
+    query_embedding = model.encode(query).astype(np.float32)
+    
+    # Perform vector search
+    top_indices = vector_search(query_embedding, vector_index, k=3)
 
     # Free memory
     del query_embedding
@@ -301,17 +302,16 @@ def get_rag_response(query, max_context_items=100):
     conn = get_db_connection()
     
     try:
-        for idx in indices[0]:
+        for idx in top_indices:
             if len(context) >= max_context_items:
                 break
                 
-            db_id = index_map.get(idx)
+            db_id = index_map.get(int(idx))
             if not db_id:
                 continue
                 
-            # Use separate cursor for each query
-            cur = conn.cursor()
-            try:
+            # Use with statement for better resource management
+            with conn.cursor() as cur:
                 # Limit results to avoid memory issues
                 cur.execute('''
                     SELECT description, amount 
@@ -345,8 +345,6 @@ def get_rag_response(query, max_context_items=100):
                 limit = cur.fetchone()
                 if limit and len(context) < max_context_items:
                     context.add(f"Budget Limit: {limit[0]}")
-            finally:
-                cur.close()
 
     finally:
         release_db_connection(conn)
@@ -368,17 +366,17 @@ def get_rag_response(query, max_context_items=100):
 # Clean up function to release resources
 def cleanup():
     """Release all resources"""
-    global sentence_model, faiss_index, index_map, connection_pool
+    global sentence_model, vector_index, index_map, connection_pool
     
     # Release model
     if sentence_model is not None:
         del sentence_model
         sentence_model = None
     
-    # Release FAISS resources
-    if faiss_index is not None:
-        del faiss_index
-        faiss_index = None
+    # Release vector resources
+    if vector_index is not None:
+        del vector_index
+        vector_index = None
     
     if index_map is not None:
         del index_map
@@ -392,5 +390,6 @@ def cleanup():
     # Force garbage collection
     gc.collect()
     print("Resources cleaned up")
+
 if __name__ == "__main__":
-    build_faiss_index()
+    build_vector_index()
