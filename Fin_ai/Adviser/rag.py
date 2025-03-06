@@ -237,7 +237,7 @@ def build_vector_index(batch_size=10):
                 index_mapping[current_idx + i] = name
         
         # Convert list of vectors to numpy array
-        vector_array = np.array(all_vectors, dtype=np.float32)
+        vector_array = np.array(all_vectors, dtype=np.float16)
         print(f"Created vector array with shape: {vector_array.shape}")
         
         # Save vector array and mapping
@@ -277,7 +277,7 @@ def query_llama3(prompt):
     except Exception as e:
         return f"Error in LLaMA API: {str(e)}"
 
-def get_rag_response(query, max_context_items=100):
+def get_rag_response(query, max_context_items=25):
     """Retrieves relevant financial information using NumPy-based vector search and queries LLaMA for an answer."""
     log_memory_usage("start_rag_response")
     
@@ -292,7 +292,7 @@ def get_rag_response(query, max_context_items=100):
 
     # Encode query & search vectors
     model = get_sentence_model()
-    query_embedding = model.encode(query).astype(np.float32)
+    query_embedding = model.encode(query).astype(np.float16)
     
     # Perform vector search
     top_indices = vector_search(query_embedding, vector_index, k=3)
