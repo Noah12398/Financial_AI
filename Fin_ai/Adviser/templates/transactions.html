@@ -1,25 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Your Transactions</title>
     <style>
         /* Dark theme with modern professional layout */
-        
+
         body {
             margin: 0;
             padding: 0;
-            height: 100vh;
+            min-height: 100vh;
+            /* Ensures page grows downwards */
             background-color: #0F111A;
             color: #FFFFFF;
             font-family: 'Inter', sans-serif;
             display: flex;
             justify-content: center;
-            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10%;
+            }
+
         }
 
         .container {
+            margin: 5%;
             max-width: 700px;
             width: 90%;
             background: #1C1E2A;
@@ -74,7 +83,8 @@
             gap: 10px;
         }
 
-        .edit-btn, .delete-btn {
+        .edit-btn,
+        .delete-btn {
             border: none;
             color: #FFFFFF;
             padding: 0.5rem 1rem;
@@ -126,60 +136,57 @@
                 width: 95%;
                 padding: 1.5rem;
             }
-            
+
             li {
                 flex-direction: column;
                 align-items: flex-start;
             }
-            
+
             .button-group {
                 margin-top: 10px;
                 width: 100%;
                 display: flex;
                 justify-content: space-between;
             }
-            h2 {
-                text-align: center;
-                margin-top: 0;
-                font-size: 1.8rem;
-                padding-top: 50rem;
-                padding-bottom: 1rem;
-            }
+
+
         }
     </style>
 </head>
+
 <body>
 
     <div class="container">
-        
+
         <h2>💳 Your Transactions</h2>
         {% if transactions %}
-            <ul>
-                {% for transaction in transactions %}
-                    <li>
-                        <div class="transaction-info">
-                            <strong>{{ transaction.date }}</strong><br>
-                            {{ transaction.category }}: ${{ transaction.amount }}
-                        </div>
-                        <div class="button-group">
-                            <!-- Edit Button -->
-                            <a href="{% url 'edit_transaction' transaction.id %}" class="edit-btn">✏️ Edit</a>
+        <ul>
+            {% for transaction in transactions %}
+            <li>
+                <div class="transaction-info">
+                    <strong>{{ transaction.date }}</strong><br>
+                    {{ transaction.category }}: ${{ transaction.amount }}
+                </div>
+                <div class="button-group">
+                    <!-- Edit Button -->
+                    <a href="{% url 'edit_transaction' transaction.id %}" class="edit-btn">✏️ Edit</a>
 
-                            <!-- Delete Button -->
-                            <form action="{% url 'delete_transaction' transaction.id %}" method="post" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="delete-btn">🗑️ Delete</button>
-                            </form>
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
+                    <!-- Delete Button -->
+                    <form action="{% url 'delete_transaction' transaction.id %}" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="delete-btn">🗑️ Delete</button>
+                    </form>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
         {% else %}
-            <p class="no-transactions">No transactions found.</p>
+        <p class="no-transactions">No transactions found.</p>
         {% endif %}
         <a href="{% url 'add_transaction' %}" class="add-link">➕ Add Transaction</a>
         <a href="{% url 'dashboard' %}" class="add-link">⬅️ Back to Dashboard</a>
-            </div>
+    </div>
 
 </body>
+
 </html>

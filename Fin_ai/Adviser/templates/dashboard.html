@@ -8,18 +8,10 @@
     <style>
         /* Dark theme with modern professional layout */
         @media (max-width: 768px) {
-            .user-info h2 {
-                text-align: center;
-                margin-top: 0;
-                font-size: 1.8rem;
-                padding-top: 20rem;
-                padding-bottom: 1rem;
-            }
 
             .dashboard-container {
                 display: flex;
                 flex-direction: column;
-                align-items: center;
                 text-align: center;
             }
 
@@ -44,7 +36,6 @@
             font-family: 'Inter', sans-serif;
             display: flex;
             justify-content: center;
-            align-items: center;
         }
 
         .dashboard-container {
@@ -83,7 +74,6 @@
             box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
             display: flex;
             justify-content: space-between;
-            align-items: center;
             transition: transform 0.3s;
         }
 
@@ -170,6 +160,8 @@
         @media (max-width: 768px) {
             .dashboard-container {
                 grid-template-columns: 1fr;
+                min-height: fit-content;
+                height: auto;
             }
 
             .user-info {

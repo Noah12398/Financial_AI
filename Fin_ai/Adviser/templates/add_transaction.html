@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,19 +12,29 @@
             color: #FFFFFF;
             display: flex;
             justify-content: center;
+            /* Centers horizontally */
             align-items: center;
+            /* Centers vertically */
             height: 100vh;
             margin: 0;
         }
 
         .form-container {
             background: #1C1E2A;
-            padding: 2rem;
+            padding: 3rem;
             border-radius: 16px;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
             width: 350px;
             text-align: center;
             border: 1px solid #333;
+            min-height: fit-content;
+            display: flex;
+            flex-direction: column;
+            /* Ensures elements inside are stacked properly */
+            align-items: center;
+            /* Centers elements inside */
+            justify-content: center;
+            /* Centers content inside */
         }
 
         h2 {
@@ -33,7 +44,8 @@
             padding-bottom: 1rem;
         }
 
-        select, input {
+        select,
+        input {
             width: 100%;
             margin: 0.5rem 0;
             padding: 0.75rem 1rem;
@@ -46,7 +58,8 @@
             transition: transform 0.3s;
         }
 
-        select:focus, input:focus {
+        select:focus,
+        input:focus {
             outline: none;
             transform: translateY(-3px);
         }
@@ -84,34 +97,35 @@
         }
     </style>
 </head>
+
 <body>
 
     <div class="form-container">
         <h2>➕ Add New Transaction</h2>
         <form method="post" action="{% url 'add_transaction' %}">
             {% csrf_token %}
-            
+
             <!-- Category Selection -->
             <select name="category_id" required onchange="updateCategoryName()">
                 <option value="" disabled selected>Select Category</option>
                 {% for category in categories %}
-                    <option value="{{ category.id }}" data-name="{{ category.name }}">{{ category.name }}</option>
+                <option value="{{ category.id }}" data-name="{{ category.name }}">{{ category.name }}</option>
                 {% endfor %}
             </select>
-    
+
             <!-- Hidden Input for Category Name -->
             <input type="hidden" name="category_name" id="category_name" required>
-    
+
             <!-- Amount Input -->
             <input type="number" name="amount" step="0.01" placeholder="Amount" required>
-    
+
             <!-- Description Input -->
             <input type="text" name="description" placeholder="Description" required>
-    
+
             <!-- Submit Button -->
             <button type="submit">Add Transaction</button>
         </form>
-    
+
         <!-- Back Link -->
         <a href="{% url 'transactions' %}">⬅️ Back to Transactions</a>
     </div>
@@ -122,7 +136,7 @@
         var select = document.querySelector("select[name='category_id']");
         var selectedOption = select.options[select.selectedIndex];
         var categoryNameInput = document.getElementById("category_name");
-        
+
         if (selectedOption && categoryNameInput) {
             categoryNameInput.value = selectedOption.getAttribute("data-name");
         }
