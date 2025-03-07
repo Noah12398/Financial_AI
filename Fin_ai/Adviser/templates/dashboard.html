@@ -1,11 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Budget Dashboard</title>
     <style>
         /* Dark theme with modern professional layout */
+        @media (max-width: 768px) {
+            .user-info h2 {
+                text-align: center;
+                margin-top: 0;
+                font-size: 1.8rem;
+                padding-top: 20rem;
+                padding-bottom: 1rem;
+            }
+
+            .dashboard-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .user-info {
+                width: 100%;
+                padding-bottom: 2rem;
+            }
+
+            .main-panel {
+                padding-left: 0;
+                width: 100%;
+            }
+        }
+
+
         body {
             margin: 0;
             padding: 0;
@@ -74,7 +103,8 @@
             margin-top: 2rem;
         }
 
-        .actions a, .actions button {
+        .actions a,
+        .actions button {
             text-decoration: none;
             color: #FFFFFF;
             background: #3A3C58;
@@ -87,7 +117,8 @@
             font-size: 1rem;
         }
 
-        .actions a:hover, .actions button:hover {
+        .actions a:hover,
+        .actions button:hover {
             background: #575A7B;
         }
 
@@ -154,6 +185,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="dashboard-container">
         <!-- User Info Panel -->
@@ -193,4 +225,5 @@
         </div>
     </div>
 </body>
+
 </html>
