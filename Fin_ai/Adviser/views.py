@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
 import requests
+from django.db.models import Sum
 from .forms import BudgetForm, TransactionForm
 from together import Together
 
@@ -21,6 +22,11 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 from django.http import JsonResponse
 from .rag import get_rag_response
 
+def get_total_spent(user):
+    total_transactions = Transaction.objects.filter(user=user).aggregate(Sum('amount'))['amount__sum'] or 0
+    total_expenses = Expense.objects.filter(user=user).aggregate(Sum('amount'))['amount__sum'] or 0
+    
+    return total_transactions + total_expenses
 # Dashboard view - logged-in users only
 @login_required
 def dashboard(request):
@@ -31,7 +37,7 @@ def dashboard(request):
     total_limit = sum(budget.limit for budget in budgets)
 
     # Calculate total amount spent across all transactions
-    amount_spent = sum(transaction.amount for transaction in Transaction.objects.filter(user=request.user))
+    amount_spent =get_total_spent(request.user)
 
     # Calculate remaining budget
     remaining_budget = total_limit - amount_spent
