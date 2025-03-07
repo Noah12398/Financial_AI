@@ -183,6 +183,7 @@
         <!-- User Info Panel -->
         <div class="user-info">
             <h2>Welcome, {{ user }}</h2>
+        <div>
             <div class="info-card">
                 <span>💰 Budget Limit</span>
                 <span class="value">$ {{ total_limit }}</span>
@@ -195,6 +196,7 @@
                 <span>🟢 Remaining</span>
                 <span class="value">$ {{ remaining_budget }}</span>
             </div>
+        </div>
             <div class="actions">
                 <!-- Logout Button -->
                 <form method="post" action="{% url 'logout' %}">
