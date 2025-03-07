@@ -2,10 +2,14 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Category(models.Model):
-    name = models.CharField(max_length=100, unique=True)  # Keep the unique constraint
- 
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Now each category is user-specific
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        unique_together = ('user', 'name')  # Ensures each user has unique category names
+
     def __str__(self):
-        return self.name
+        return f"{self.user.username} - {self.name}"
 
     
 class Expense(models.Model):

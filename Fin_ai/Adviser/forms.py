@@ -41,12 +41,16 @@ class ExpenseForm(forms.ModelForm):
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'name': forms.TextInput(attrs={'class': 'form-control'}),  # Add this line
         }
-
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['category'].queryset = Category.objects.filter(user=user)
 
 class BudgetForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].queryset = Category.objects.all()
+        if user:
+            self.fields['category'].queryset = Category.objects.filter(user=user)  # Properly filter categories
 
     class Meta:
         model = Budget
@@ -59,6 +63,18 @@ class BudgetForm(forms.ModelForm):
 
 
 class TransactionForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields['category'].queryset = Category.objects.filter(user=user)  # Filter categories by user
+
     class Meta:
         model = Transaction
-        fields = ['name', 'category', 'amount','description']
+        fields = ['name', 'category', 'amount', 'description']
+        widgets = {
+            'name': forms.TextInput(),
+            'category': forms.Select(),
+            'amount': forms.NumberInput(),
+            'description': forms.Textarea(attrs={ 'rows': 3}),
+        }
+

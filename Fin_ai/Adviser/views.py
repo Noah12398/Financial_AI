@@ -1,3 +1,4 @@
+from decimal import Decimal
 import subprocess
 import traceback
 from django.shortcuts import render, redirect
@@ -55,6 +56,7 @@ def transactions(request):
     transactions = Transaction.objects.filter(user=request.user).order_by("-date")
     return render(request, "transactions.html", {"transactions": transactions})
 # Chatbot view - OpenAI integration
+
 def chatbot_query(request):
     if request.method == "POST":
         user_query = request.POST.get("query")
@@ -64,7 +66,7 @@ def chatbot_query(request):
     if not user_query:
         return render(request, "chatbot.html", {"bot_response": "Please enter a question!"})
 
-    response = get_rag_response(user_query)
+    response = get_rag_response(user_query, request)
 
     # Format the response here if needed
     bot_response2 = response.replace("\n", "<br>")  # Add line breaks for better readability
@@ -104,27 +106,27 @@ def login_user(request):
             return redirect('login')  # Stay on the login page if authentication fails
     return render(request, 'authentication/login.html')
 
-@login_required
-def add_expense(request):
-    if request.method == 'POST':
-        form = ExpenseForm(request.POST)
-        if form.is_valid():
-            expense = form.save(commit=False)
-            expense.user = request.user  # Assign the logged-in user to the expense
-            expense.save()
-            
-            
-            return redirect('manage_expenses')  # Redirect to transactions page or another page
-    else:
-        form = ExpenseForm()
-    
-    return render(request, 'add_expense.html', {'form': form})
 
 @login_required
 def transactions_view(request):
     # Fetch transactions from the database for the logged-in user
     transactions = Transaction.objects.filter(user=request.user).order_by("-date")
     return render(request, 'transactions.html', {'transactions': transactions})
+
+# Expense Management
+@login_required
+def add_expense(request):
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST, user=request.user)  # Pass user here
+        if form.is_valid():
+            expense = form.save(commit=False)
+            expense.user = request.user
+            expense.save()
+            return redirect('manage_expenses')
+    else:
+        form = ExpenseForm(user=request.user)  # Pass user here as well
+
+    return render(request, 'add_expense.html', {'form': form})
 
 @login_required
 def manage_expenses(request):
@@ -134,14 +136,15 @@ def manage_expenses(request):
 @login_required
 def edit_expense(request, expense_id):
     expense = get_object_or_404(Expense, id=expense_id, user=request.user)
+
     if request.method == 'POST':
-        form = ExpenseForm(request.POST, instance=expense)
+        form = ExpenseForm(request.POST, instance=expense, user=request.user)  # Pass user
         if form.is_valid():
             form.save()
-            
             return redirect('manage_expenses')
     else:
-        form = ExpenseForm(instance=expense)
+        form = ExpenseForm(instance=expense, user=request.user)  # Pass user
+
     return render(request, 'edit_expense.html', {'form': form})
 
 @login_required
@@ -149,66 +152,62 @@ def delete_expense(request, expense_id):
     expense = get_object_or_404(Expense, id=expense_id, user=request.user)
     if request.method == 'POST':
         expense.delete()
-          
         return redirect('manage_expenses')
-
 
 @login_required
 def manage_budgets(request):
     budgets = Budget.objects.filter(user=request.user)
     return render(request, 'manage_budgets.html', {'budgets': budgets})
 
-
-# 🟢 Add Budget
 @login_required
 def add_budget(request):
     if request.method == 'POST':
-        form = BudgetForm(request.POST)
+        form = BudgetForm(request.POST, user=request.user)
         if form.is_valid():
             budget = form.save(commit=False)
             budget.user = request.user
             budget.save()
-
-            # Run the .rag file after saving the budget
-            
             return redirect('manage_budgets')
     else:
-        form = BudgetForm()
+        form = BudgetForm(user=request.user)
     return render(request, 'add_budget.html', {'form': form})
 
-# 🟡 Edit Budget
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .forms import BudgetForm
+from .models import Budget
+
 @login_required
 def edit_budget(request, budget_id):
     budget = get_object_or_404(Budget, id=budget_id, user=request.user)
+    
     if request.method == 'POST':
-        form = BudgetForm(request.POST, instance=budget)
+        form = BudgetForm(request.POST, instance=budget, user=request.user)  # Pass user
         if form.is_valid():
             form.save()
             messages.success(request, 'Budget updated successfully!')
-            
             return redirect('manage_budgets')
     else:
-        form = BudgetForm(instance=budget)
+        form = BudgetForm(instance=budget, user=request.user)  # Pass user
+
     return render(request, 'edit_budget.html', {'form': form})
 
-
-# 🔴 Delete Budget
 @login_required
 def delete_budget(request, budget_id):
     budget = get_object_or_404(Budget, id=budget_id, user=request.user)
     if request.method == 'POST':
         budget.delete()
         messages.success(request, 'Budget deleted successfully!')
-         
         return redirect('manage_budgets')
     return render(request, 'confirm_delete.html', {'budget': budget})
-
 @login_required
 def add_category(request):
     if request.method == "POST":
         name = request.POST.get("name")
+        user = request.user
         if name:
-            Category.objects.create(name=name)
+            Category.objects.create(name=name, user=user)
             
             return redirect("manage_budgets")
     return render(request, "add_category.html")
@@ -219,60 +218,29 @@ def transactions_view(request):
     transactions = Transaction.objects.filter(user=request.user).order_by('-date')
     return render(request, 'transactions.html', {'transactions': transactions})
 
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from .models import Transaction, Category
-from decimal import Decimal
 
 @login_required
 def add_transaction(request):
     if request.method == "POST":
-        category_id = request.POST.get('category_id')
-        amount = request.POST.get('amount')
-        description = request.POST.get('description')
-        name = request.POST.get('category_name')  # Correct
-
-        # Validate that 'name' is not empty
+        category_id, amount, description, name = request.POST.get('category_id'), request.POST.get('amount'), request.POST.get('description'), request.POST.get('category_name')
         if not name:
-            return render(request, 'add_transaction.html', {
-                'categories': Category.objects.all(),
-                'error': "Transaction name is required."
-            })
-
-        # Define category as None initially
-        category = None
-        if category_id:
-            try:
-                category = Category.objects.get(id=category_id)
-            except Category.DoesNotExist:
-                pass  # Leave category as None if not found
-
-        # Create and save the transaction
-        Transaction.objects.create(
-            user=request.user,
-            category=category,
-            amount=Decimal(amount),
-            description=description,
-            name=name  # Ensure this is passed
-        )
-          
-        return redirect('transactions')  # Redirect to the transaction list page
-
-    categories = Category.objects.all()
-    return render(request, 'add_transaction.html', {'categories': categories})
+            return render(request, 'add_transaction.html', {'categories': Category.objects.filter(user=request.user), 'error': "Transaction name is required."})
+        category = Category.objects.filter(id=category_id, user=request.user).first() if category_id else None
+        Transaction.objects.create(user=request.user, category=category, amount=Decimal(amount), description=description, name=name)
+        return redirect('transactions')
+    return render(request, 'add_transaction.html', {'categories': Category.objects.filter(user=request.user)})
 
 @login_required
 def edit_transaction(request, transaction_id):
     transaction = get_object_or_404(Transaction, id=transaction_id, user=request.user)
 
     if request.method == 'POST':
-        form = TransactionForm(request.POST, instance=transaction)
+        form = TransactionForm(request.POST, instance=transaction, user=request.user)  # Pass user
         if form.is_valid():
             form.save()
-            
-            return redirect('transactions')  # Redirect to transaction list
+            return redirect('transactions')
     else:
-        form = TransactionForm(instance=transaction)
+        form = TransactionForm(instance=transaction, user=request.user)  # Pass user
 
     return render(request, 'edit_transaction.html', {'form': form})
 
@@ -281,6 +249,5 @@ def delete_transaction(request, transaction_id):
     transaction = get_object_or_404(Transaction, id=transaction_id, user=request.user)
     if request.method == 'POST':
         transaction.delete()
-          
         return redirect('transactions')
     return render(request, 'delete_transaction.html', {'transaction': transaction})

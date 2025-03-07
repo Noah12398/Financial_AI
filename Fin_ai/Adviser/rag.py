@@ -1,6 +1,7 @@
 import os
 import psycopg2
 import json
+from requests import request
 from together import Together
 from dotenv import load_dotenv
 from collections import defaultdict
@@ -28,13 +29,14 @@ def get_db_connection():
     )
 
 # Function to fetch financial data and build context
-def fetch_financial_data():
+# Function to fetch financial data for the logged-in user
+def fetch_financial_data(request):
     conn = get_db_connection()
     cur = conn.cursor()
 
     try:
         # Fetch category data
-        cur.execute('SELECT id, name FROM "Adviser_category"')
+        cur.execute('SELECT id, name FROM "Adviser_category" WHERE user_id = %s', (request.user.id,))  
         category_data = cur.fetchall()
         category_dict = {id_: name for id_, name in category_data}  # {category_id: category_name}
 
@@ -42,14 +44,14 @@ def fetch_financial_data():
         category_data_dict = defaultdict(lambda: {"transactions": [], "expenses": [], "budget": "No budget set"})
 
         # Fetch budget data
-        cur.execute('SELECT id, category_id, name, "limit" FROM "BudgetTable"')
+        cur.execute('SELECT id, category_id, name, "limit" FROM "BudgetTable" WHERE user_id = %s', (request.user.id,))
         budget_data = cur.fetchall()
         for _, category_id, name, limit in budget_data:
             category_name = category_dict.get(category_id, "Uncategorized")
             category_data_dict[category_name]["budget"] = f"Budget Limit: {limit}"
 
         # Fetch transaction data
-        cur.execute('SELECT id, category_id, description, amount FROM "Adviser_transaction"')
+        cur.execute('SELECT id, category_id, description, amount FROM "Adviser_transaction" WHERE user_id = %s', (request.user.id,))
         transaction_data = cur.fetchall()
         for _, category_id, description, amount in transaction_data:
             category_name = category_dict.get(category_id, "Uncategorized")
@@ -57,7 +59,7 @@ def fetch_financial_data():
             category_data_dict[category_name]["transactions"].append(transaction_text)
 
         # Fetch expense data
-        cur.execute('SELECT id, category_id, name, amount FROM "Adviser_expense"')
+        cur.execute('SELECT id, category_id, name, amount FROM "Adviser_expense" WHERE user_id = %s', (request.user.id,))
         expense_data = cur.fetchall()
         for _, category_id, name, amount in expense_data:
             category_name = category_dict.get(category_id, "Uncategorized")
@@ -74,7 +76,8 @@ def fetch_financial_data():
             # Calculate total amounts
             total_transactions_amount = sum(float(tx.split("Transactions_Amount: ")[1]) for tx in details["transactions"] if "Transactions_Amount: " in tx)
             total_expenses_amount = sum(float(exp.split("Expense_Amount: ")[1]) for exp in details["expenses"] if "Expense_Amount: " in exp)
-            total_amount=total_transactions_amount+total_expenses_amount
+            total_amount = total_transactions_amount + total_expenses_amount
+
             final_text = f"Category: {category}, {budget_text}, Transactions: {transactions_text}, Expenses: {expenses_text}, Total Amount: {total_amount}"
             all_data.append(final_text)
 
@@ -83,6 +86,7 @@ def fetch_financial_data():
     finally:
         cur.close()
         conn.close()
+
 
 # Query Meta-LLaMA 3.1 via Together AI
 def query_llama3(prompt):
@@ -99,9 +103,9 @@ def query_llama3(prompt):
         return f"Error in LLaMA API: {str(e)}"
 
 # Generate RAG response using all_data directly as context
-def get_rag_response(query):
+def get_rag_response(query, request):
     # Get financial data as context
-    all_data = fetch_financial_data()
+    all_data = fetch_financial_data(request)
     context_text = "\n".join(all_data)
 
     # Construct the prompt
