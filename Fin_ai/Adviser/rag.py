@@ -91,13 +91,13 @@ def fetch_financial_data(request):
 # Query Meta-LLaMA 3.1 via Together AI
 def query_llama3(prompt):
     try:
+
         response = client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo-128K",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
-            temperature=0.5,
-            top_p=0.9
-        )
+    model="meta-llama/Llama-3.3-70B-Instruct-Turbo-Free",
+    messages=[{"role": "user", "content": prompt}],
+)
+        print(response)
+
         return response.choices[0].message.content if response.choices else "No response received."
     except Exception as e:
         return f"Error in LLaMA API: {str(e)}"
